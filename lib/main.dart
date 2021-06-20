@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -10,6 +11,7 @@ import 'package:photo_gallery/photo_gallery.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:photo_view/photo_view.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 
 void main() {
   runApp(MyApp());
@@ -37,7 +39,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  List<Album>? _albums;
+  late List<Album> _albums;
   bool _loading = false;
 
   @override
@@ -104,7 +106,7 @@ class _MyAppState extends State<MyApp> {
                       mainAxisSpacing: 5.0,
                       crossAxisSpacing: 5.0,
                       children: <Widget>[
-                        ...?_albums?.map(
+                        ..._albums.map(
                           (album) => GestureDetector(
                             onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -178,7 +180,7 @@ class AlbumPage extends StatefulWidget {
 }
 
 class AlbumPageState extends State<AlbumPage> {
-  List<Medium>? _media;
+  late List<Medium> _media;
 
   @override
   void initState() {
@@ -213,10 +215,10 @@ class AlbumPageState extends State<AlbumPage> {
           mainAxisSpacing: 1.0,
           crossAxisSpacing: 1.0,
           children: <Widget>[
-            ...?_media?.map(
-              (medium) => GestureDetector(
+            ...(_media.asMap().map(
+              (index, medium) => MapEntry(index, GestureDetector(
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => ViewerPage(medium))),
+                    builder: (context) => PreloadImagePageView(_media, index))),
                 child: Container(
                   color: Colors.grey[300],
                   child: FadeInImage(
@@ -230,10 +232,69 @@ class AlbumPageState extends State<AlbumPage> {
                   ),
                 ),
               ),
-            ),
+            ))).values.toList(),
           ],
         ),
       ),
+    );
+  }
+}
+
+class PreloadImagePageView extends StatefulWidget {
+  final List<Medium> media;
+  final int initialIndex;
+
+  PreloadImagePageView(List<Medium> media, index) : media = media, initialIndex = index {
+    developer.log('index: $index', name: 'SG');
+  }
+
+  @override
+  _PreloadImagePageViewState createState() => _PreloadImagePageViewState();
+}
+
+class _PreloadImagePageViewState extends State<PreloadImagePageView> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.arrow_back_ios),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 1.0,
+        ),
+        body: Container(
+            child: PreloadPageView.builder(
+          preloadPagesCount: 5,
+          itemCount: widget.media.length,
+          itemBuilder: (BuildContext context, int position) =>
+              _getImage(position),
+          controller: PreloadPageController(initialPage: widget.initialIndex),
+          onPageChanged: (int position) {
+            print('page changed. current: $position');
+          },
+        )));
+  }
+
+  _getImage(int position) {
+    final int index = position;
+    developer.log('position: $position', name: 'SG');
+    return Container(
+      alignment: Alignment.center,
+      child: widget.media[index].mediumType == MediumType.image
+          ? PhotoView(
+              imageProvider: PhotoProvider(mediumId: widget.media[index].id),
+            )
+          // ? FadeInImage(
+          //     fit: BoxFit.cover,
+          //     placeholder: MemoryImage(kTransparentImage),
+          //     image: PhotoProvider(mediumId: medium.id),
+          //   )
+          : VideoProvider(
+              mediumId: widget.media[index].id,
+            ),
     );
   }
 }
@@ -246,7 +307,7 @@ class ViewerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     DateTime? date = medium.creationDate ?? medium.modifiedDate;
-
+/*
     return Scaffold(
         body: Stack(children: <Widget>[
           Scaffold(
@@ -280,18 +341,22 @@ class ViewerPage extends StatelessWidget {
       ),
     );
 
-    /*
+ */
+
     return MaterialApp(
-      theme: ThemeData(
-        primaryColor: Colors.white,
-      ),
+      // theme: ThemeData(
+      //   primaryColor: Colors.white,
+      // ),
       home: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
           leading: IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: Icon(Icons.arrow_back_ios),
           ),
           title: date != null ? Text(date.toLocal().toString()) : null,
+          backgroundColor: Colors.transparent,
+          elevation: 0.0,
         ),
         body: Container(
           alignment: Alignment.center,
@@ -310,8 +375,6 @@ class ViewerPage extends StatelessWidget {
         ),
       ),
     );
-
-     */
   }
 }
 
