@@ -39,7 +39,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late List<Album> _albums;
+  List<Album>? _albums;
   bool _loading = false;
 
   @override
@@ -54,7 +54,6 @@ class _MyAppState extends State<MyApp> {
       List<Album> albums =
           await PhotoGallery.listAlbums(mediumType: MediumType.image);
       setState(() {
-        //_albums = albums;
         _albums = [albums[0], ...shuffle(albums.sublist(1))];
         _loading = false;
       });
@@ -93,79 +92,81 @@ class _MyAppState extends State<MyApp> {
             ? Center(
                 child: CircularProgressIndicator(),
               )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  double gridWidth = (constraints.maxWidth - 20) / 3;
-                  double gridHeight = gridWidth + 33;
-                  double ratio = gridWidth / gridHeight;
-                  return Container(
-                    padding: EdgeInsets.all(5),
-                    child: GridView.count(
-                      childAspectRatio: ratio,
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 5.0,
-                      crossAxisSpacing: 5.0,
-                      children: <Widget>[
-                        ..._albums.map(
-                          (album) => GestureDetector(
-                            onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (context) => AlbumPage(album))),
-                            child: Column(
-                              children: <Widget>[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(5.0),
-                                  child: Container(
-                                    color: Colors.grey[300],
-                                    height: gridWidth,
-                                    width: gridWidth,
-                                    child: FadeInImage(
-                                      fit: BoxFit.cover,
-                                      placeholder:
-                                          MemoryImage(kTransparentImage),
-                                      image: AlbumThumbnailProvider(
-                                        albumId: album.id,
-                                        mediumType: album.mediumType,
-                                        highQuality: true,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  alignment: Alignment.topLeft,
-                                  padding: EdgeInsets.only(left: 2.0),
-                                  child: Text(
-                                    album.name,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.start,
-                                    style: TextStyle(
-                                      height: 1.2,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  alignment: Alignment.topLeft,
-                                  padding: EdgeInsets.only(left: 2.0),
-                                  child: Text(
-                                    album.count.toString(),
-                                    textAlign: TextAlign.start,
-                                    style: TextStyle(
-                                      height: 1.2,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
+            : _getAlbumGridView(),
+      ),
+    );
+  }
+
+  _getAlbumGridView() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double gridWidth = (constraints.maxWidth - 20) / 3;
+        double gridHeight = gridWidth + 33;
+        double ratio = gridWidth / gridHeight;
+        return Container(
+          padding: EdgeInsets.all(5),
+          child: GridView.count(
+            childAspectRatio: ratio,
+            crossAxisCount: 3,
+            mainAxisSpacing: 5.0,
+            crossAxisSpacing: 5.0,
+            children: <Widget>[
+              ...?_albums?.map(
+                (album) => GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => AlbumPage(album))),
+                  child: Column(
+                    children: <Widget>[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(5.0),
+                        child: Container(
+                          color: Colors.grey[300],
+                          height: gridWidth,
+                          width: gridWidth,
+                          child: FadeInImage(
+                            fit: BoxFit.cover,
+                            placeholder: MemoryImage(kTransparentImage),
+                            image: AlbumThumbnailProvider(
+                              albumId: album.id,
+                              mediumType: album.mediumType,
+                              highQuality: true,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      ),
+                      Container(
+                        alignment: Alignment.topLeft,
+                        padding: EdgeInsets.only(left: 2.0),
+                        child: Text(
+                          album.name,
+                          maxLines: 1,
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            height: 1.2,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        alignment: Alignment.topLeft,
+                        padding: EdgeInsets.only(left: 2.0),
+                        child: Text(
+                          album.count.toString(),
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            height: 1.2,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -180,7 +181,7 @@ class AlbumPage extends StatefulWidget {
 }
 
 class AlbumPageState extends State<AlbumPage> {
-  late List<Medium> _media;
+  List<Medium>? _media;
 
   @override
   void initState() {
@@ -191,7 +192,6 @@ class AlbumPageState extends State<AlbumPage> {
   void initAsync() async {
     MediaPage mediaPage = await widget.album.listMedia();
     setState(() {
-      //_media = mediaPage.items;
       _media = shuffle(mediaPage.items);
     });
   }
@@ -210,15 +210,22 @@ class AlbumPageState extends State<AlbumPage> {
           ),
           title: Text(widget.album.name),
         ),
-        body: GridView.count(
-          crossAxisCount: 4,
-          mainAxisSpacing: 1.0,
-          crossAxisSpacing: 1.0,
-          children: <Widget>[
-            ...(_media.asMap().map(
-              (index, medium) => MapEntry(index, GestureDetector(
+        body: _getImageGridView(),
+      ),
+    );
+  }
+
+  _getImageGridView() {
+    return GridView.count(
+      crossAxisCount: 4,
+      mainAxisSpacing: 1.0,
+      crossAxisSpacing: 1.0,
+      children: <Widget>[
+        ...?_media?.asMap().map((index, medium) => MapEntry(
+              index,
+              GestureDetector(
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => PreloadImagePageView(_media, index))),
+                    builder: (context) => PreloadImagePageView(_media!, index))),
                 child: Container(
                   color: Colors.grey[300],
                   child: FadeInImage(
@@ -232,10 +239,8 @@ class AlbumPageState extends State<AlbumPage> {
                   ),
                 ),
               ),
-            ))).values.toList(),
-          ],
-        ),
-      ),
+            )).values.toList(),
+      ],
     );
   }
 }
@@ -244,7 +249,9 @@ class PreloadImagePageView extends StatefulWidget {
   final List<Medium> media;
   final int initialIndex;
 
-  PreloadImagePageView(List<Medium> media, index) : media = media, initialIndex = index {
+  PreloadImagePageView(List<Medium> media, index)
+      : media = media,
+        initialIndex = index {
     developer.log('index: $index', name: 'SG');
   }
 
@@ -265,17 +272,19 @@ class _PreloadImagePageViewState extends State<PreloadImagePageView> {
           backgroundColor: Colors.transparent,
           elevation: 1.0,
         ),
-        body: Container(
-            child: PreloadPageView.builder(
-          preloadPagesCount: 5,
-          itemCount: widget.media.length,
-          itemBuilder: (BuildContext context, int position) =>
-              _getImage(position),
-          controller: PreloadPageController(initialPage: widget.initialIndex),
-          onPageChanged: (int position) {
-            print('page changed. current: $position');
-          },
-        )));
+        body: Container(child: _getPreloadPageView()));
+  }
+
+  _getPreloadPageView() {
+    return PreloadPageView.builder(
+      preloadPagesCount: 5,
+      itemCount: widget.media.length,
+      itemBuilder: (BuildContext context, int position) => _getImage(position),
+      controller: PreloadPageController(initialPage: widget.initialIndex),
+      onPageChanged: (int position) {
+        print('page changed. current: $position');
+      },
+    );
   }
 
   _getImage(int position) {
@@ -295,85 +304,6 @@ class _PreloadImagePageViewState extends State<PreloadImagePageView> {
           : VideoProvider(
               mediumId: widget.media[index].id,
             ),
-    );
-  }
-}
-
-class ViewerPage extends StatelessWidget {
-  final Medium medium;
-
-  ViewerPage(Medium medium) : medium = medium;
-
-  @override
-  Widget build(BuildContext context) {
-    DateTime? date = medium.creationDate ?? medium.modifiedDate;
-/*
-    return Scaffold(
-        body: Stack(children: <Widget>[
-          Scaffold(
-            backgroundColor: Colors.transparent,
-            // appBar: AppBar(
-            //   leading: IconButton(
-            //     onPressed: () => Navigator.of(context).pop(),
-            //     icon: Icon(Icons.arrow_back_ios),
-            //   ),
-            //   title: date != null ? Text(date.toLocal().toString()) : null,
-            //   backgroundColor: Colors.transparent,
-            //   elevation: 0.0,
-            // ),
-            body: Container(
-              alignment: Alignment.center,
-              child: medium.mediumType == MediumType.image
-                  ? PhotoView(
-                      imageProvider: PhotoProvider(mediumId: medium.id),
-                    )
-                  // ? FadeInImage(
-                  //     fit: BoxFit.cover,
-                  //     placeholder: MemoryImage(kTransparentImage),
-                  //     image: PhotoProvider(mediumId: medium.id),
-                  //   )
-                  : VideoProvider(
-                      mediumId: medium.id,
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-
- */
-
-    return MaterialApp(
-      // theme: ThemeData(
-      //   primaryColor: Colors.white,
-      // ),
-      home: Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(Icons.arrow_back_ios),
-          ),
-          title: date != null ? Text(date.toLocal().toString()) : null,
-          backgroundColor: Colors.transparent,
-          elevation: 0.0,
-        ),
-        body: Container(
-          alignment: Alignment.center,
-          child: medium.mediumType == MediumType.image
-              ? PhotoView(
-                  imageProvider: PhotoProvider(mediumId: medium.id),
-                )
-              // ? FadeInImage(
-              //     fit: BoxFit.cover,
-              //     placeholder: MemoryImage(kTransparentImage),
-              //     image: PhotoProvider(mediumId: medium.id),
-              //   )
-              : VideoProvider(
-                  mediumId: medium.id,
-                ),
-        ),
-      ),
     );
   }
 }
