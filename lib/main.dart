@@ -13,6 +13,8 @@ import 'package:video_player/video_player.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
+enum AlbumPageType {GRID, LIST}
+
 void main() {
   runApp(MyApp());
 }
@@ -183,6 +185,7 @@ class AlbumPage extends StatefulWidget {
 class AlbumPageState extends State<AlbumPage> {
   List<Medium>? _media;
   bool _loading = false;
+  AlbumPageType _mode = AlbumPageType.GRID;
 
   @override
   void initState() {
@@ -209,12 +212,37 @@ class AlbumPageState extends State<AlbumPage> {
           ? Center(
               child: CircularProgressIndicator(),
             )
-          :
-           _getBasicAlbumPage(),
-      // _getListAlbumPage(),
+          : Scaffold(
+              body: CustomScrollView(
+              slivers: <Widget>[
+                _getSliverActionBar(),
+                _getAlbumPage(),
+              ],
+            )),
     );
+    // return MaterialApp(
+    //   theme: ThemeData(
+    //     primaryColor: Colors.white,
+    //   ),
+    //   home: _loading
+    //       ? Center(
+    //           child: CircularProgressIndicator(),
+    //         )
+    //       :
+    //        // _getBasicAlbumPage(),
+    //   _getListAlbumPage(),
+    // );
   }
 
+  _getAlbumPage() {
+    if (_mode == AlbumPageType.LIST) {
+      return _getSliverGridByList();
+    } else {
+      return _getSliverGrid();
+    }
+  }
+
+  /*
   _getBasicAlbumPage() {
     return Scaffold(
       appBar: AppBar(
@@ -224,59 +252,120 @@ class AlbumPageState extends State<AlbumPage> {
         ),
         title: Text(widget.album.name),
         actions: <Widget>[
-          IconButton(icon: Icon(Icons.line_weight/*Icons.grid_on_rounded*/), onPressed: () => {})
+          IconButton(
+              icon: Icon(Icons.line_weight /*Icons.grid_on_rounded*/),
+              onPressed: () => {})
         ],
       ),
       body: _getImageGridView(),
     );
   }
+   */
 
+  /*
   _getListAlbumPage() {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: <Widget>[
-          SliverAppBar(
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            title: Text(widget.album.name),
-            floating: true,
-            //flexibleSpace: Placeholder(),
-            //expandedHeight: 200,
-          ),
-          SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 1,
-            ),
-            delegate: SliverChildBuilderDelegate((context, index) {
-              return GestureDetector(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => PreloadImagePageView(_media!, index))),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
-                  child: Card(
-                    color: Colors.grey[300],
-                    elevation: 4.0,
-                    clipBehavior: Clip.antiAliasWithSaveLayer,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    child: FadeInImage(
-                      fit: BoxFit.cover,
-                      placeholder: MemoryImage(kTransparentImage),
-                      image: PhotoProvider(mediumId: _media![index].id),
-                    ),
-                  ),
-                ),
-              );
-            }, childCount: _media?.length),
-          ),
-        ],
-      )
+        body: CustomScrollView(
+      slivers: <Widget>[
+        _getSliverActionBar(),
+        _getSliverGridByList(),
+      ],
+    ));
+  }
+   */
+
+  _getSliverActionBar() {
+    return SliverAppBar(
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: Text(widget.album.name),
+      floating: true,
+      actions: <Widget>[
+        IconButton(icon: _getAlbumModeIcon(),
+            onPressed: () => _onAlbumModeChange()),
+      ],
+      //flexibleSpace: Placeholder(),
+      //expandedHeight: 200,
     );
   }
 
+  _getAlbumModeIcon() {
+    if (_mode == AlbumPageType.LIST) {
+      return Icon(Icons.view_comfy);
+    } else {
+      return Icon(Icons.line_weight);
+    }
+  }
+
+  _onAlbumModeChange() {
+    setState(() {
+      _mode = (_mode == AlbumPageType.LIST)
+          ? AlbumPageType.GRID
+          : AlbumPageType.LIST;
+    });
+  }
+
+  _getSliverGridByList() {
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 1,
+      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return GestureDetector(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => PreloadImagePageView(_media!, index))),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+            child: Card(
+              color: Colors.grey[300],
+              elevation: 4.0,
+              clipBehavior: Clip.antiAliasWithSaveLayer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: FadeInImage(
+                fit: BoxFit.cover,
+                placeholder: MemoryImage(kTransparentImage),
+                image: PhotoProvider(mediumId: _media![index].id),
+              ),
+            ),
+          ),
+        );
+      }, childCount: _media?.length),
+    );
+  }
+
+  _getSliverGrid() {
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 1.0,
+        crossAxisSpacing: 1.0,
+      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return GestureDetector(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => PreloadImagePageView(_media!, index))),
+          child: Container(
+            //padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+            child: FadeInImage(
+                fit: BoxFit.cover,
+                placeholder: MemoryImage(kTransparentImage),
+                image: ThumbnailProvider(
+                  mediumId: _media![index].id,
+                  mediumType: _media![index].mediumType,
+                  highQuality: true,
+                ),
+              ),
+            ),
+        );
+      }, childCount: _media?.length),
+    );
+  }
+
+  /*
   _getImageGridView() {
     return GridView.count(
       crossAxisCount: 4,
@@ -310,6 +399,7 @@ class AlbumPageState extends State<AlbumPage> {
       ],
     );
   }
+   */
 }
 
 class PreloadImagePageView extends StatefulWidget {
