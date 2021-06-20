@@ -55,7 +55,7 @@ class _MyAppState extends State<MyApp> {
           await PhotoGallery.listAlbums(mediumType: MediumType.image);
       setState(() {
         //_albums = albums;
-        _albums = shuffle(albums);
+        _albums = [albums[0], ...shuffle(albums.sublist(1))];
         _loading = false;
       });
     }
