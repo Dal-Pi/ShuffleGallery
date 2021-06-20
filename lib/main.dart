@@ -182,10 +182,12 @@ class AlbumPage extends StatefulWidget {
 
 class AlbumPageState extends State<AlbumPage> {
   List<Medium>? _media;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
+    _loading = true;
     initAsync();
   }
 
@@ -193,6 +195,7 @@ class AlbumPageState extends State<AlbumPage> {
     MediaPage mediaPage = await widget.album.listMedia();
     setState(() {
       _media = shuffle(mediaPage.items);
+      _loading = false;
     });
   }
 
@@ -202,16 +205,75 @@ class AlbumPageState extends State<AlbumPage> {
       theme: ThemeData(
         primaryColor: Colors.white,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: Text(widget.album.name),
+      home: _loading
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          :
+           _getBasicAlbumPage(),
+      // _getListAlbumPage(),
+    );
+  }
+
+  _getBasicAlbumPage() {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        body: _getImageGridView(),
+        title: Text(widget.album.name),
+        actions: <Widget>[
+          IconButton(icon: Icon(Icons.line_weight/*Icons.grid_on_rounded*/), onPressed: () => {})
+        ],
       ),
+      body: _getImageGridView(),
+    );
+  }
+
+  _getListAlbumPage() {
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: <Widget>[
+          SliverAppBar(
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text(widget.album.name),
+            floating: true,
+            //flexibleSpace: Placeholder(),
+            //expandedHeight: 200,
+          ),
+          SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 1,
+            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => PreloadImagePageView(_media!, index))),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+                  child: Card(
+                    color: Colors.grey[300],
+                    elevation: 4.0,
+                    clipBehavior: Clip.antiAliasWithSaveLayer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    child: FadeInImage(
+                      fit: BoxFit.cover,
+                      placeholder: MemoryImage(kTransparentImage),
+                      image: PhotoProvider(mediumId: _media![index].id),
+                    ),
+                  ),
+                ),
+              );
+            }, childCount: _media?.length),
+          ),
+        ],
+      )
     );
   }
 
@@ -221,25 +283,30 @@ class AlbumPageState extends State<AlbumPage> {
       mainAxisSpacing: 1.0,
       crossAxisSpacing: 1.0,
       children: <Widget>[
-        ...?_media?.asMap().map((index, medium) => MapEntry(
-              index,
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => PreloadImagePageView(_media!, index))),
-                child: Container(
-                  color: Colors.grey[300],
-                  child: FadeInImage(
-                    fit: BoxFit.cover,
-                    placeholder: MemoryImage(kTransparentImage),
-                    image: ThumbnailProvider(
-                      mediumId: medium.id,
-                      mediumType: medium.mediumType,
-                      highQuality: true,
+        ...?_media
+            ?.asMap()
+            .map((index, medium) => MapEntry(
+                  index,
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) =>
+                            PreloadImagePageView(_media!, index))),
+                    child: Container(
+                      color: Colors.grey[300],
+                      child: FadeInImage(
+                        fit: BoxFit.cover,
+                        placeholder: MemoryImage(kTransparentImage),
+                        image: ThumbnailProvider(
+                          mediumId: medium.id,
+                          mediumType: medium.mediumType,
+                          highQuality: true,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            )).values.toList(),
+                ))
+            .values
+            .toList(),
       ],
     );
   }
