@@ -13,7 +13,7 @@ import 'package:video_player/video_player.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
-enum AlbumPageType {GRID, LIST}
+enum AlbumPageType { GRID, LIST }
 
 void main() {
   runApp(MyApp());
@@ -89,6 +89,7 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Shuffle Gallery'),
           brightness: Brightness.light,
+          elevation: 0.0,
         ),
         body: _loading
             ? Center(
@@ -106,8 +107,8 @@ class _MyAppState extends State<MyApp> {
         double gridHeight = gridWidth + 33;
         double ratio = gridWidth / gridHeight;
         return Container(
-          padding: EdgeInsets.all(5),
           child: GridView.count(
+            padding: EdgeInsets.all(5),
             childAspectRatio: ratio,
             crossAxisCount: 3,
             mainAxisSpacing: 5.0,
@@ -283,8 +284,8 @@ class AlbumPageState extends State<AlbumPage> {
       title: Text(widget.album.name),
       floating: true,
       actions: <Widget>[
-        IconButton(icon: _getAlbumModeIcon(),
-            onPressed: () => _onAlbumModeChange()),
+        IconButton(
+            icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
       ],
       //flexibleSpace: Placeholder(),
       //expandedHeight: 200,
@@ -307,7 +308,40 @@ class AlbumPageState extends State<AlbumPage> {
     });
   }
 
+  _getSliverGrid() {
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 1.0,
+        crossAxisSpacing: 1.0,
+      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return GestureDetector(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => PreloadImagePageView(_media!, index))),
+          child: Container(
+            //padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+            child: FadeInImage(
+              fit: BoxFit.cover,
+              placeholder: MemoryImage(kTransparentImage),
+              image: ThumbnailProvider(
+                mediumId: _media![index].id,
+                mediumType: _media![index].mediumType,
+                highQuality: true,
+              ),
+            ),
+          ),
+        );
+      }, childCount: _media?.length),
+    );
+  }
+
   _getSliverGridByList() {
+    //return _getFixedHeightListView();
+    return _getCoveredHeightListView();
+  }
+
+  _getFixedHeightListView() {
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 1,
@@ -337,29 +371,28 @@ class AlbumPageState extends State<AlbumPage> {
     );
   }
 
-  _getSliverGrid() {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 1.0,
-        crossAxisSpacing: 1.0,
-      ),
+  _getCoveredHeightListView() {
+    return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         return GestureDetector(
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (context) => PreloadImagePageView(_media!, index))),
           child: Container(
-            //padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
-            child: FadeInImage(
+            padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+            child: Card(
+              color: Colors.grey[300],
+              elevation: 4.0,
+              clipBehavior: Clip.antiAliasWithSaveLayer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: FadeInImage(
                 fit: BoxFit.cover,
                 placeholder: MemoryImage(kTransparentImage),
-                image: ThumbnailProvider(
-                  mediumId: _media![index].id,
-                  mediumType: _media![index].mediumType,
-                  highQuality: true,
-                ),
+                image: PhotoProvider(mediumId: _media![index].id),
               ),
             ),
+          ),
         );
       }, childCount: _media?.length),
     );
@@ -419,17 +452,35 @@ class PreloadImagePageView extends StatefulWidget {
 class _PreloadImagePageViewState extends State<PreloadImagePageView> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(Icons.arrow_back_ios),
+    return MaterialApp(
+      theme: ThemeData(
+        primaryColor: Colors.grey,
+        //backgroundColor: Colors.transparent,
+      ),
+      home: WillPopScope(
+        onWillPop: () async {
+          //TODO WillPopScope not work
+          //Navigator.of(context).pop();
+          developer.log('onWillPop', name: 'SG');
+          setState(() {
+            developer.log('onWillPop', name: 'SG');
+          });
+          return false;
+        },
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          appBar: AppBar(
+            leading: IconButton(
+              onPressed: () { developer.log('onPressed', name: 'SG'); Navigator.of(context).pop(); },
+              icon: Icon(Icons.arrow_back_ios),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 1.0,
           ),
-          backgroundColor: Colors.transparent,
-          elevation: 1.0,
+          body: Container(child: _getPreloadPageView())
         ),
-        body: Container(child: _getPreloadPageView()));
+      ),
+    );
   }
 
   _getPreloadPageView() {
