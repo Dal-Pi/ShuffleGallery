@@ -4,16 +4,15 @@ import 'dart:math';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:photo_gallery/photo_gallery.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
 enum AlbumPageType { GRID, LIST }
+const int kItemCountByPage = 10;
 
 void main() {
   runApp(MyApp());
@@ -35,14 +34,32 @@ List<T> shuffle<T>(List<T> items) {
   return items;
 }
 
+Future<bool> promptPermissionSetting() async {
+  if (Platform.isIOS &&
+          await Permission.storage.request().isGranted &&
+          await Permission.photos.request().isGranted ||
+      Platform.isAndroid && await Permission.storage.request().isGranted) {
+    return true;
+  }
+  return false;
+}
+
 class MyApp extends StatefulWidget {
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  List<Album>? _albums;
+  List<AssetPathEntity> _albumPathList = [];
+  int _currentPage = 0;
+  int _lastPage = 0;
+  List<Widget> _albumList = [];
   bool _loading = false;
+
+  //test
+  AssetPathEntity _albumPath = AssetPathEntity();
+  List<AssetEntity> _mediaPathList = [];
+  List<Widget> _mediaList = [];
 
   @override
   void initState() {
@@ -52,11 +69,20 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> initAsync() async {
-    if (await _promptPermissionSetting()) {
-      List<Album> albums =
-          await PhotoGallery.listAlbums(mediumType: MediumType.image);
+    if (await promptPermissionSetting()) {
+      List<AssetPathEntity> albumPaths = await PhotoManager.getAssetPathList();
+      print(albumPaths);
+      _albumPathList = [albumPaths[0], ...shuffle(albumPaths.sublist(1))];
+      //test
+      _albumPath = _albumPathList[0];
+      // _mediaPathList = await _albumPathList[0]
+      //     .getAssetListPaged(_currentPage, kItemCountByPage);
+      // print(_mediaPathList);
+
+      //test
+      _fetchNewMedia();
       setState(() {
-        _albums = [albums[0], ...shuffle(albums.sublist(1))];
+        //TODO index check
         _loading = false;
       });
     }
@@ -65,14 +91,47 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<bool> _promptPermissionSetting() async {
-    if (Platform.isIOS &&
-            await Permission.storage.request().isGranted &&
-            await Permission.photos.request().isGranted ||
-        Platform.isAndroid && await Permission.storage.request().isGranted) {
-      return true;
+  _handleScrollEvent(ScrollNotification scroll) {
+    //TODO scroll position check logic
+    if (scroll.metrics.pixels / scroll.metrics.maxScrollExtent > 0.33) {
+      if (_currentPage != _lastPage) {
+        _fetchNewMedia();
+      }
     }
-    return false;
+  }
+
+  //test
+  _fetchNewMedia() async {
+    developer.log("_fetchNewMedia, _lastPage: $_lastPage, _currentPage $_currentPage", name:"SG");
+    _lastPage = _currentPage;
+    if (await promptPermissionSetting()) {
+      _mediaPathList = await _albumPath
+          .getAssetListPaged(_currentPage, kItemCountByPage);
+      print(_mediaPathList);
+      List<Widget> temp = [];
+      for (var mediaPath in _mediaPathList) {
+        temp.add(
+          FutureBuilder<dynamic>(
+            //TODO thumb size
+            future: mediaPath.thumbDataWithSize(200, 200),
+            builder: (BuildContext context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done)
+                return Image.memory(
+                  snapshot.data,
+                  fit: BoxFit.cover,
+                );
+              else
+                //TODO this case
+                return Container();
+            }
+          )
+        );
+      }
+      setState(() {
+        _mediaList.addAll(temp);
+        _currentPage++;
+      });
+    }
   }
 
   @override
@@ -86,194 +145,41 @@ class _MyAppState extends State<MyApp> {
         primaryColor: Colors.white,
       ),
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Shuffle Gallery'),
-          brightness: Brightness.light,
-          elevation: 0.0,
-        ),
+        // appBar: AppBar(
+        //   title: const Text('Shuffle Gallery'),
+        //   brightness: Brightness.light,
+        //   elevation: 0.0,
+        // ),
         body: _loading
             ? Center(
                 child: CircularProgressIndicator(),
               )
-            : _getAlbumGridView(),
+            : _getAlbumView(),
       ),
     );
   }
 
-  _getAlbumGridView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double gridWidth = (constraints.maxWidth - 20) / 3;
-        double gridHeight = gridWidth + 33;
-        double ratio = gridWidth / gridHeight;
-        return Container(
-          child: GridView.count(
-            padding: EdgeInsets.all(5),
-            childAspectRatio: ratio,
-            crossAxisCount: 3,
-            mainAxisSpacing: 5.0,
-            crossAxisSpacing: 5.0,
-            children: <Widget>[
-              ...?_albums?.map(
-                (album) => GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => AlbumPage(album))),
-                  child: Column(
-                    children: <Widget>[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(5.0),
-                        child: Container(
-                          color: Colors.grey[300],
-                          height: gridWidth,
-                          width: gridWidth,
-                          child: FadeInImage(
-                            fit: BoxFit.cover,
-                            placeholder: MemoryImage(kTransparentImage),
-                            image: AlbumThumbnailProvider(
-                              albumId: album.id,
-                              mediumType: album.mediumType,
-                              highQuality: true,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        alignment: Alignment.topLeft,
-                        padding: EdgeInsets.only(left: 2.0),
-                        child: Text(
-                          album.name,
-                          maxLines: 1,
-                          textAlign: TextAlign.start,
-                          style: TextStyle(
-                            height: 1.2,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        alignment: Alignment.topLeft,
-                        padding: EdgeInsets.only(left: 2.0),
-                        child: Text(
-                          album.count.toString(),
-                          textAlign: TextAlign.start,
-                          style: TextStyle(
-                            height: 1.2,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
+  _getAlbumView() {
+    return LayoutBuilder(builder: (context, constraints) {
+      //TODO arrange
+      double gridWidth = (constraints.maxWidth - 20) / 3;
+      double gridHeight = gridWidth + 33;
+      double ratio = gridWidth / gridHeight;
 
-class AlbumPage extends StatefulWidget {
-  final Album album;
-
-  AlbumPage(Album album) : album = album;
-
-  @override
-  State<StatefulWidget> createState() => AlbumPageState();
-}
-
-class AlbumPageState extends State<AlbumPage> {
-  List<Medium>? _media;
-  bool _loading = false;
-  AlbumPageType _mode = AlbumPageType.GRID;
-
-  @override
-  void initState() {
-    super.initState();
-    _loading = true;
-    initAsync();
-  }
-
-  void initAsync() async {
-    MediaPage mediaPage = await widget.album.listMedia();
-    setState(() {
-      _media = shuffle(mediaPage.items);
-      _loading = false;
+      return NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scroll) {
+          _handleScrollEvent(scroll);
+          return true;
+        },
+        child: CustomScrollView(
+          slivers: <Widget>[
+            _getSliverActionBar(),
+            _getAlbumPage(),
+          ],
+        ),
+      );
     });
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        primaryColor: Colors.white,
-      ),
-      home: _loading
-          ? Center(
-              child: CircularProgressIndicator(),
-            )
-          : Scaffold(
-              body: CustomScrollView(
-              slivers: <Widget>[
-                _getSliverActionBar(),
-                _getAlbumPage(),
-              ],
-            )),
-    );
-    // return MaterialApp(
-    //   theme: ThemeData(
-    //     primaryColor: Colors.white,
-    //   ),
-    //   home: _loading
-    //       ? Center(
-    //           child: CircularProgressIndicator(),
-    //         )
-    //       :
-    //        // _getBasicAlbumPage(),
-    //   _getListAlbumPage(),
-    // );
-  }
-
-  _getAlbumPage() {
-    if (_mode == AlbumPageType.LIST) {
-      return _getSliverGridByList();
-    } else {
-      return _getSliverGrid();
-    }
-  }
-
-  /*
-  _getBasicAlbumPage() {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(widget.album.name),
-        actions: <Widget>[
-          IconButton(
-              icon: Icon(Icons.line_weight /*Icons.grid_on_rounded*/),
-              onPressed: () => {})
-        ],
-      ),
-      body: _getImageGridView(),
-    );
-  }
-   */
-
-  /*
-  _getListAlbumPage() {
-    return Scaffold(
-        body: CustomScrollView(
-      slivers: <Widget>[
-        _getSliverActionBar(),
-        _getSliverGridByList(),
-      ],
-    ));
-  }
-   */
 
   _getSliverActionBar() {
     return SliverAppBar(
@@ -281,40 +187,52 @@ class AlbumPageState extends State<AlbumPage> {
         icon: Icon(Icons.arrow_back_ios),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      title: Text(widget.album.name),
+      title: Text(_albumPath.name),
       floating: true,
-      actions: <Widget>[
-        IconButton(
-            icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
-      ],
-      //flexibleSpace: Placeholder(),
-      //expandedHeight: 200,
     );
   }
 
-  _getAlbumModeIcon() {
-    if (_mode == AlbumPageType.LIST) {
-      return Icon(Icons.view_comfy);
-    } else {
-      return Icon(Icons.line_weight);
-    }
-  }
-
-  _onAlbumModeChange() {
-    setState(() {
-      _mode = (_mode == AlbumPageType.LIST)
-          ? AlbumPageType.GRID
-          : AlbumPageType.LIST;
-    });
-  }
-
-  _getSliverGrid() {
+  _getAlbumPage() {
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
+        crossAxisCount: 2,
         mainAxisSpacing: 1.0,
         crossAxisSpacing: 1.0,
       ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return GestureDetector(
+            onTap: () {},
+            child: Container(
+              //height: gridWidth,
+              //width: gridWidth,
+              child: _mediaList[index],
+              //child: CircularProgressIndicator(),
+            ),
+          );
+        },
+        childCount: _mediaList.length,
+      ),
+    );
+  }
+}
+
+/*
+          SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 1.0,
+              crossAxisSpacing: 1.0,
+            ),
+          )
+
+          return SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 1.0,
+          crossAxisSpacing: 1.0,
+        )
+      },
       delegate: SliverChildBuilderDelegate((context, index) {
         return GestureDetector(
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -336,246 +254,6 @@ class AlbumPageState extends State<AlbumPage> {
     );
   }
 
-  _getSliverGridByList() {
-    //return _getFixedHeightListView();
-    return _getCoveredHeightListView();
-  }
-
-  _getFixedHeightListView() {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1,
-      ),
-      delegate: SliverChildBuilderDelegate((context, index) {
-        return GestureDetector(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (context) => PreloadImagePageView(_media!, index))),
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
-            child: Card(
-              color: Colors.grey[300],
-              elevation: 4.0,
-              clipBehavior: Clip.antiAliasWithSaveLayer,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: FadeInImage(
-                fit: BoxFit.cover,
-                placeholder: MemoryImage(kTransparentImage),
-                image: PhotoProvider(mediumId: _media![index].id),
-              ),
-            ),
-          ),
-        );
-      }, childCount: _media?.length),
-    );
-  }
-
-  _getCoveredHeightListView() {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        return GestureDetector(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (context) => PreloadImagePageView(_media!, index))),
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
-            child: Card(
-              color: Colors.grey[300],
-              elevation: 4.0,
-              clipBehavior: Clip.antiAliasWithSaveLayer,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: FadeInImage(
-                fit: BoxFit.cover,
-                placeholder: MemoryImage(kTransparentImage),
-                image: PhotoProvider(mediumId: _media![index].id),
-              ),
-            ),
-          ),
-        );
-      }, childCount: _media?.length),
-    );
-  }
-
-  /*
-  _getImageGridView() {
-    return GridView.count(
-      crossAxisCount: 4,
-      mainAxisSpacing: 1.0,
-      crossAxisSpacing: 1.0,
-      children: <Widget>[
-        ...?_media
-            ?.asMap()
-            .map((index, medium) => MapEntry(
-                  index,
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) =>
-                            PreloadImagePageView(_media!, index))),
-                    child: Container(
-                      color: Colors.grey[300],
-                      child: FadeInImage(
-                        fit: BoxFit.cover,
-                        placeholder: MemoryImage(kTransparentImage),
-                        image: ThumbnailProvider(
-                          mediumId: medium.id,
-                          mediumType: medium.mediumType,
-                          highQuality: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ))
-            .values
-            .toList(),
-      ],
-    );
-  }
-   */
 }
 
-class PreloadImagePageView extends StatefulWidget {
-  final List<Medium> media;
-  final int initialIndex;
-
-  PreloadImagePageView(List<Medium> media, index)
-      : media = media,
-        initialIndex = index {
-    developer.log('index: $index', name: 'SG');
-  }
-
-  @override
-  _PreloadImagePageViewState createState() => _PreloadImagePageViewState();
-}
-
-class _PreloadImagePageViewState extends State<PreloadImagePageView> {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        primaryColor: Colors.grey,
-        //backgroundColor: Colors.transparent,
-      ),
-      home: WillPopScope(
-        onWillPop: () async {
-          //TODO WillPopScope not work
-          //Navigator.of(context).pop();
-          developer.log('onWillPop', name: 'SG');
-          setState(() {
-            developer.log('onWillPop', name: 'SG');
-          });
-          return false;
-        },
-        child: Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
-            leading: IconButton(
-              onPressed: () { developer.log('onPressed', name: 'SG'); Navigator.of(context).pop(); },
-              icon: Icon(Icons.arrow_back_ios),
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 1.0,
-          ),
-          body: Container(child: _getPreloadPageView())
-        ),
-      ),
-    );
-  }
-
-  _getPreloadPageView() {
-    return PreloadPageView.builder(
-      preloadPagesCount: 5,
-      itemCount: widget.media.length,
-      itemBuilder: (BuildContext context, int position) => _getImage(position),
-      controller: PreloadPageController(initialPage: widget.initialIndex),
-      onPageChanged: (int position) {
-        print('page changed. current: $position');
-      },
-    );
-  }
-
-  _getImage(int position) {
-    final int index = position;
-    developer.log('position: $position', name: 'SG');
-    return Container(
-      alignment: Alignment.center,
-      child: widget.media[index].mediumType == MediumType.image
-          ? PhotoView(
-              imageProvider: PhotoProvider(mediumId: widget.media[index].id),
-            )
-          // ? FadeInImage(
-          //     fit: BoxFit.cover,
-          //     placeholder: MemoryImage(kTransparentImage),
-          //     image: PhotoProvider(mediumId: medium.id),
-          //   )
-          : VideoProvider(
-              mediumId: widget.media[index].id,
-            ),
-    );
-  }
-}
-
-class VideoProvider extends StatefulWidget {
-  final String mediumId;
-
-  const VideoProvider({
-    required this.mediumId,
-  });
-
-  @override
-  _VideoProviderState createState() => _VideoProviderState();
-}
-
-class _VideoProviderState extends State<VideoProvider> {
-  VideoPlayerController? _controller;
-  File? _file;
-
-  @override
-  void initState() {
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
-      initAsync();
-    });
-    super.initState();
-  }
-
-  Future<void> initAsync() async {
-    try {
-      _file = await PhotoGallery.getFile(mediumId: widget.mediumId);
-      _controller = VideoPlayerController.file(_file!);
-      _controller?.initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
-        setState(() {});
-      });
-    } catch (e) {
-      print("Failed : $e");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _controller == null || !_controller!.value.isInitialized
-        ? Container()
-        : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!),
-              ),
-              FlatButton(
-                onPressed: () {
-                  setState(() {
-                    _controller!.value.isPlaying
-                        ? _controller!.pause()
-                        : _controller!.play();
-                  });
-                },
-                child: Icon(
-                  _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                ),
-              ),
-            ],
-          );
-  }
-}
+           */
