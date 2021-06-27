@@ -11,38 +11,17 @@ import 'package:video_player/video_player.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
+import 'package:shuffle_gallery/Util.dart';
+
+import 'package:shuffle_gallery/AlbumListView.dart';
+
 enum AlbumPageType { GRID, LIST }
 
 void main() {
-  runApp(MyApp());
+  runApp(AlbumListView());
 }
 
-List<T> shuffle<T>(List<T> items) {
-  var random = new Random();
-
-  // Go through all elements.
-  for (var i = items.length - 1; i > 0; i--) {
-    // Pick a pseudorandom number according to the list length
-    var n = random.nextInt(i + 1);
-
-    var temp = items[i];
-    items[i] = items[n];
-    items[n] = temp;
-  }
-
-  return items;
-}
-
-Future<bool> promptPermissionSetting() async {
-  if (Platform.isIOS &&
-          await Permission.storage.request().isGranted &&
-          await Permission.photos.request().isGranted ||
-      Platform.isAndroid && await Permission.storage.request().isGranted) {
-    return true;
-  }
-  return false;
-}
-
+/*
 class MyApp extends StatefulWidget {
   @override
   _MyAppState createState() => _MyAppState();
@@ -274,7 +253,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
+*/
 /*
           SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
