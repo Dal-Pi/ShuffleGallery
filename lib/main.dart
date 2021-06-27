@@ -60,7 +60,7 @@ class _MyAppState extends State<MyApp> {
   List<AssetEntity> _mediaPathList = [];
   List<Widget> _mediaList = [];
   int _rowCount = 3;
-  int _viewHeightRatio = 10;
+  int _viewHeightRatio = 2;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
 
@@ -83,6 +83,11 @@ class _MyAppState extends State<MyApp> {
       // print(_mediaPathList);
 
       //test
+      developer.log('initAsync(), _albumPath.assetCount: ${_albumPath.assetCount}', name:'SG');
+      _mediaPathList = shuffle(
+          await _albumPath
+              .getAssetListRange(start: 0, end: _albumPath.assetCount)
+      );
       _fetchNewMedia();
       setState(() {
         //TODO index check
@@ -142,15 +147,26 @@ class _MyAppState extends State<MyApp> {
     if (await promptPermissionSetting()) {
       final int loadingItemCount = _rowCount * _rowCount * _viewHeightRatio;
       developer.log('_fetchNewMedia(), loadingItemCount: $loadingItemCount', name:'SG');
-      _mediaPathList = await _albumPath
-          .getAssetListPaged(_currentPage, loadingItemCount);
+      // _mediaPathList = await _albumPath
+      //     .getAssetListPaged(_currentPage, loadingItemCount);
       //print(_mediaPathList);
+      int begin = _mediaList.length;
+      int end = begin;
+      if (begin + loadingItemCount > _albumPath.assetCount) {
+        end = _albumPath.assetCount;
+        developer.log('_fetchNewMedia(), end is assetCount: $end', name:'SG');
+      } else {
+        end += loadingItemCount;
+        developer.log('_fetchNewMedia(), end is added loadingItemCount: $end', name:'SG');
+      }
+
       List<Widget> temp = [];
-      for (var mediaPath in _mediaPathList) {
+      //for (var mediaPath in _mediaPathList) {
+      for (int i = begin; i < end; ++i) {
         temp.add(
           FutureBuilder<dynamic>(
             //TODO thumb size
-            future: mediaPath.thumbDataWithSize(200, 200),
+            future: _mediaPathList[i].thumbDataWithSize(200, 200),
             builder: (BuildContext context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done)
                 return Image.memory(
