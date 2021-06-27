@@ -12,7 +12,6 @@ import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
 enum AlbumPageType { GRID, LIST }
-const int kItemCountByPage = 10;
 
 void main() {
   runApp(MyApp());
@@ -60,6 +59,10 @@ class _MyAppState extends State<MyApp> {
   AssetPathEntity _albumPath = AssetPathEntity();
   List<AssetEntity> _mediaPathList = [];
   List<Widget> _mediaList = [];
+  int _rowCount = 3;
+  int _viewHeightRatio = 10;
+  double _prevMaxScrollExtent = 0.0;
+  double _nextLoadingScrollTarget = 0.0;
 
   @override
   void initState() {
@@ -93,21 +96,55 @@ class _MyAppState extends State<MyApp> {
 
   _handleScrollEvent(ScrollNotification scroll) {
     //TODO scroll position check logic
-    if (scroll.metrics.pixels / scroll.metrics.maxScrollExtent > 0.33) {
+
+    // developer.log('_handleScrollEvent(), '
+    //     'pixels: ${scroll.metrics.pixels}, '
+    //     'maxScrollExtent: ${scroll.metrics.maxScrollExtent}, '
+    //     '_currentPage: $_currentPage, '
+    //     '_lastPage: $_lastPage', name:'SG');
+    double currentPos = scroll.metrics.pixels;
+    double maxPos = scroll.metrics.maxScrollExtent;
+    if (_prevMaxScrollExtent < maxPos) {
+      _nextLoadingScrollTarget = _prevMaxScrollExtent + ((maxPos - _prevMaxScrollExtent) * 0.1);
+      developer.log('_handleScrollEvent(), updated _nextLoadingScrollTarget: $_nextLoadingScrollTarget', name:'SG');
+    }
+    //developer.log('_handleScrollEvent(), _nextLoadingScrollTarget: $_nextLoadingScrollTarget', name:'SG');
+    if (_nextLoadingScrollTarget < currentPos) {
+      _nextLoadingScrollTarget = maxPos;
+      developer.log('_handleScrollEvent(), updated temporary _nextLoadingScrollTarget: $_nextLoadingScrollTarget', name:'SG');
       if (_currentPage != _lastPage) {
         _fetchNewMedia();
+      } else {
+        developer.log('_handleScrollEvent(), current page is same with last page, _currentPage: $_currentPage, _lastPage: $_lastPage', name:'SG');
       }
     }
+    _prevMaxScrollExtent = maxPos;
+
+    ///
+    // if (((currentPos / maxPos) > 0.5)) {
+    //   if (_currentPage != _lastPage) {
+    //     if (_nextLoadingScrollTarget < currentPos) {
+    //       _fetchNewMedia();
+    //     } else {
+    //       developer.log('_handleScrollEvent(), scroll not updated yet, _prevMaxScrollExtent: $_prevMaxScrollExtent, maxPos: $maxPos', name:'SG');
+    //     }
+    //   } else {
+    //     developer.log('_handleScrollEvent(), current page is same with last page, _currentPage: $_currentPage, _lastPage: $_lastPage', name:'SG');
+    //   }
+    // }
+
   }
 
   //test
   _fetchNewMedia() async {
-    developer.log("_fetchNewMedia, _lastPage: $_lastPage, _currentPage $_currentPage", name:"SG");
+    developer.log('_fetchNewMedia(), _lastPage: $_lastPage, _currentPage $_currentPage', name:'SG');
     _lastPage = _currentPage;
     if (await promptPermissionSetting()) {
+      final int loadingItemCount = _rowCount * _rowCount * _viewHeightRatio;
+      developer.log('_fetchNewMedia(), loadingItemCount: $loadingItemCount', name:'SG');
       _mediaPathList = await _albumPath
-          .getAssetListPaged(_currentPage, kItemCountByPage);
-      print(_mediaPathList);
+          .getAssetListPaged(_currentPage, loadingItemCount);
+      //print(_mediaPathList);
       List<Widget> temp = [];
       for (var mediaPath in _mediaPathList) {
         temp.add(
@@ -128,8 +165,14 @@ class _MyAppState extends State<MyApp> {
         );
       }
       setState(() {
-        _mediaList.addAll(temp);
-        _currentPage++;
+        if (temp.length > 0) {
+          developer.log('_fetchNewMedia(), loaded temp.length: ${temp.length}', name:'SG');
+          _mediaList.addAll(temp);
+          developer.log('_fetchNewMedia(), _mediaList: ${_mediaList.length}', name:'SG');
+          _currentPage++;
+        } else {
+          developer.log('_fetchNewMedia(), no more load item', name:'SG');
+        }
       });
     }
   }
@@ -160,12 +203,12 @@ class _MyAppState extends State<MyApp> {
   }
 
   _getAlbumView() {
-    return LayoutBuilder(builder: (context, constraints) {
-      //TODO arrange
-      double gridWidth = (constraints.maxWidth - 20) / 3;
-      double gridHeight = gridWidth + 33;
-      double ratio = gridWidth / gridHeight;
-
+    // return LayoutBuilder(builder: (context, constraints) {
+    //   //TODO arrange
+    //   double gridWidth = (constraints.maxWidth - 20) / kRowCount;
+    //   double gridHeight = gridWidth + 33;
+    //   double ratio = gridWidth / gridHeight;
+    //   developer.log('LayoutBuilder, gridWidth: $gridWidth, gridHeight: $gridHeight', name: 'SG');
       return NotificationListener<ScrollNotification>(
         onNotification: (ScrollNotification scroll) {
           _handleScrollEvent(scroll);
@@ -174,11 +217,11 @@ class _MyAppState extends State<MyApp> {
         child: CustomScrollView(
           slivers: <Widget>[
             _getSliverActionBar(),
-            _getAlbumPage(),
+            _getAlbumGridView(),
           ],
         ),
       );
-    });
+    // });
   }
 
   _getSliverActionBar() {
@@ -192,20 +235,19 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  _getAlbumPage() {
+  _getAlbumGridView() {
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: _rowCount,
         mainAxisSpacing: 1.0,
         crossAxisSpacing: 1.0,
+        //childAspectRatio: 0.66,
       ),
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           return GestureDetector(
             onTap: () {},
             child: Container(
-              //height: gridWidth,
-              //width: gridWidth,
               child: _mediaList[index],
               //child: CircularProgressIndicator(),
             ),
