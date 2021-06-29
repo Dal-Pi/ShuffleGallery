@@ -4,7 +4,6 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:transparent_image/transparent_image.dart';
 
 import 'package:shuffle_gallery/Util.dart';
 
@@ -34,7 +33,7 @@ class _MediaListViewState extends State<MediaListView> {
   List<Widget> _mediaList = [];
   int _currentPage = 0;
   int _lastPage = 0;
-  int _rowCount = 4;
+  int _rowCount = 3;
   int _viewHeightRatio = 2;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
@@ -141,16 +140,9 @@ class _MediaListViewState extends State<MediaListView> {
             future: _mediaPathList[i].thumbDataWithSize(200, 200),
             builder: (BuildContext context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done)
-                return FadeInImage(
-                  fadeInDuration: Duration(
-                    milliseconds: 300,
-                  ),
+                return Image.memory(
+                  snapshot.data,
                   fit: BoxFit.cover,
-                  placeholder: MemoryImage(kTransparentImage),
-                  image: Image.memory(
-                    snapshot.data,
-                    fit: BoxFit.cover,
-                  ).image,
                 );
               else
                 //TODO this case

@@ -135,16 +135,10 @@ class _AlbumListViewState extends State<AlbumListView> {
                 future: _firstMediaPathList[i].thumbDataWithSize(500, 500),
                 builder: (BuildContext context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
-                    return FadeInImage(
-                        fit: BoxFit.cover,
-                        fadeInDuration: Duration(
-                          milliseconds: 300,
-                        ),
-                        placeholder: MemoryImage(kTransparentImage),
-                        image: Image.memory(
-                          snapshot.data,
-                          fit: BoxFit.cover,
-                        ).image,);
+                    return Image.memory(
+                      snapshot.data,
+                      fit: BoxFit.cover,
+                    );
                   }
                   else {
                     //TODO this case
