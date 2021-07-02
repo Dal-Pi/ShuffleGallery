@@ -5,6 +5,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+import 'package:shuffle_gallery/PreloadViewPager.dart';
 import 'package:shuffle_gallery/Util.dart';
 
 enum AlbumPageType { GRID, LIST }
@@ -19,22 +20,14 @@ class MediaListView extends StatefulWidget {
 }
 
 class _MediaListViewState extends State<MediaListView> {
-  //TODO remove
-  // List<AssetPathEntity> _albumPathList = [];
-  // int _currentPage = 0;
-  // int _lastPage = 0;
-  // List<Widget> _albumList = [];
-  // bool _loading = false;
-
-  //test
   bool _loading = false;
   final AssetPathEntity _albumPath;
   List<AssetEntity> _mediaPathList = [];
   List<Widget> _mediaList = [];
   int _currentPage = 0;
   int _lastPage = 0;
-  int _rowCount = 3;
-  int _viewHeightRatio = 2;
+  int _rowCount = 4;
+  int _viewHeightRatio = 10;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
 
@@ -221,7 +214,12 @@ class _MediaListViewState extends State<MediaListView> {
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           return GestureDetector(
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) =>
+                  PreloadViewPager(_mediaPathList, index),
+                ));
+            },
             child: Container(
               child: _mediaList[index],
               //child: CircularProgressIndicator(),

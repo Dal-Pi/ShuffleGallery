@@ -221,60 +221,53 @@ class _AlbumListViewState extends State<AlbumListView> {
       ),
       delegate: SliverChildBuilderDelegate(
             (context, index) {
-          return GestureDetector(
-            onTap: () {},
-            child: Container(
-              child: LayoutBuilder(
-                  builder: (context, constraints) {
-
-                    return GestureDetector(
-                      onTap: () =>
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (context) =>
-                                  MediaListView(_albumPathList[index]))),
-                      child: Column(
-                        children: <Widget>[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(5.0),
-                            child: Container(
-                              color: Colors.grey[300],
-                              height: gridWidth,
-                              width: gridWidth,
-                              child: _albumThumbnailList[index],
-                            ),
-                          ),
-                          Container(
-                            alignment: Alignment.topLeft,
-                            padding: EdgeInsets.only(left: 2.0),
-                            child: Text(
-                              _albumPathList[index].name,
-                              maxLines: 1,
-                              textAlign: TextAlign.start,
-                              style: TextStyle(
-                                height: 1.2,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            alignment: Alignment.topLeft,
-                            padding: EdgeInsets.only(left: 2.0),
-                            child: Text(
-                              _albumPathList[index].assetCount.toString(),
-                              textAlign: TextAlign.start,
-                              style: TextStyle(
-                                height: 1.2,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return GestureDetector(
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) =>
+                            MediaListView(_albumPathList[index]))),
+                child: Column(
+                  children: <Widget>[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(5.0),
+                      child: Container(
+                        color: Colors.grey[300],
+                        height: gridWidth,
+                        width: gridWidth,
+                        child: _albumThumbnailList[index],
                       ),
-                    );
-                  }
-              ),
-              //child: CircularProgressIndicator(),
-            ),
+                    ),
+                    Container(
+                      alignment: Alignment.topLeft,
+                      padding: EdgeInsets.only(left: 2.0),
+                      child: Text(
+                        _albumPathList[index].name,
+                        maxLines: 1,
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          height: 1.2,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.topLeft,
+                      padding: EdgeInsets.only(left: 2.0),
+                      child: Text(
+                        _albumPathList[index].assetCount.toString(),
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          height: 1.2,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
           );
         },
         childCount: _albumThumbnailList.length,
