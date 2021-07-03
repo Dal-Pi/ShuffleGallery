@@ -4,7 +4,6 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:transparent_image/transparent_image.dart';
 
 import 'package:shuffle_gallery/MediaListView.dart';
 import 'package:shuffle_gallery/Util.dart';
@@ -47,8 +46,13 @@ class _AlbumListViewState extends State<AlbumListView> {
 
   Future<void> initAsync() async {
     if (await promptPermissionSetting()) {
-      List<AssetPathEntity> albumPaths = await PhotoManager.getAssetPathList();
+      List<AssetPathEntity> albumPaths = await PhotoManager.getAssetPathList(type: RequestType.image);
       print(albumPaths);
+
+      //log
+      for (var assetPathEntity in albumPaths) {
+        developer.log('name: ${assetPathEntity.name}, count: ${assetPathEntity.assetCount}', name:'SG_Log');
+      }
 
       if (albumPaths.length > 0) {
         _albumPathList = [albumPaths[0], ...shuffle(albumPaths.sublist(1))];

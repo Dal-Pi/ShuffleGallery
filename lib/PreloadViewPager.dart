@@ -30,17 +30,22 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   bool isInitialSize = true;
   PreloadPageController _pageController;
   bool _isFullViewMode = true;
+  //PhotoViewController _viewController = PhotoViewController();
+  //PhotoViewScaleStateController _viewScaleStateController =
+  //  PhotoViewScaleStateController();
+  PhotoViewScaleState _currentScaleState = PhotoViewScaleState.initial;
 
   _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index)
       : _mediaPathList = mediaPathList,
         //_index = index,
         _pageController = PreloadPageController(initialPage: index);
 
-
   @override
   void initState() {
     super.initState();
     _setSystemOverlay();
+    //_viewController = PhotoViewController()
+    //  ..outputStateStream.listen(_viewScaleListener);
   }
 
   @override
@@ -72,6 +77,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   void dispose() {
     super.dispose();
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
+    //_viewController.dispose();
   }
 
   void _setSystemOverlay() {
@@ -84,13 +90,25 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   }
 
   ScrollPhysics _getDefaultScrollPhysics() {
-    if (_isFullViewMode) {
-      return NeverScrollableScrollPhysics();
-    } else {
+    if (_currentScaleState == PhotoViewScaleState.initial
+        || _currentScaleState == PhotoViewScaleState.zoomedOut) {
       //TODO check ios
       //return BouncingScrollPhysics();
       return ClampingScrollPhysics();
+    } else {
+      return NeverScrollableScrollPhysics();
     }
+  }
+
+  // void _viewScaleListener(PhotoViewControllerValue value) {
+  //   developer.log('value: $value', name:'SG_Log');
+  // }
+
+  void _viewScaleListener(PhotoViewScaleState value) {
+    developer.log('value: $value', name:'SG_Log');
+    setState(() {
+      _currentScaleState = value;
+    });
   }
 
   _getPreloadPageView() {
@@ -139,6 +157,8 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
                     snapshot.data as File,
                   ),
                   backgroundDecoration: BoxDecoration(color: Colors.white,),
+                //controller: _viewController,
+                scaleStateChangedCallback: _viewScaleListener,
                 //controller: ,
                 //controller: PhotoViewController(),
             ),

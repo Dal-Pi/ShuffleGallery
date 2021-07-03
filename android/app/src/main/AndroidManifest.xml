@@ -2,6 +2,7 @@
     package="com.kania.shuffle_gallery">
    <application
         android:label="shuffle_gallery"
+        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
