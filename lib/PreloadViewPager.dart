@@ -62,7 +62,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
         elevation: 1.0,
       ),
       body: Center(
-        child: _getPreloadPageView()
+          child: _getPreloadPageView()
         //child: _getImageView(_index),
       ),
     );
@@ -76,7 +76,8 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
 
   void _setSystemOverlay() {
     if (_isFullViewMode) {
-      SystemChrome.setEnabledSystemUIOverlays ([]);
+      SystemChrome.setEnabledSystemUIOverlays ([]); //status and navi bar
+      //SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.bottom]); //status and only
     } else {
       SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     }
