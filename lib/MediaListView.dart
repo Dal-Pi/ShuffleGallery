@@ -163,18 +163,13 @@ class _MediaListViewState extends State<MediaListView> {
     //   systemNavigationBarColor: Colors.blue, // navigation bar color
     //   statusBarColor: Colors.white, // status bar color
     // ));
-    return MaterialApp(
-      theme: ThemeData(
-        primaryColor: Colors.white,
-      ),
-      home: Scaffold(
+    return Scaffold(
         body: _loading
             ? Center(
                 child: CircularProgressIndicator(),
               )
             : _getAlbumView(),
-      ),
-    );
+      );
   }
 
   _getAlbumView() {
@@ -221,8 +216,10 @@ class _MediaListViewState extends State<MediaListView> {
                 ));
             },
             child: Container(
-              child: _mediaList[index],
-              //child: CircularProgressIndicator(),
+              child: Hero(
+                tag: _mediaPathList[index].id.toString(),
+                child : _mediaList[index],
+              ),
             ),
           );
         },
