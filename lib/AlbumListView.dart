@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:transparent_image/transparent_image.dart';
 
@@ -163,10 +164,10 @@ class _AlbumListViewState extends State<AlbumListView> {
 
   @override
   Widget build(BuildContext context) {
-    // SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    //   systemNavigationBarColor: Colors.blue, // navigation bar color
-    //   statusBarColor: Colors.white, // status bar color
-    // ));
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      //systemNavigationBarColor: Colors.white70, // navigation bar color
+      statusBarColor: Colors.white12, // status bar color
+    ));
     return MaterialApp(
       theme: ThemeData(
         primaryColor: Colors.white,

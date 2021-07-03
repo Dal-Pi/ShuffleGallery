@@ -26,20 +26,28 @@ class PreloadViewPager extends StatefulWidget {
 
 class _PreloadViewPagerState extends State<PreloadViewPager> {
   List<AssetEntity> _mediaPathList;
-  int _index;
+  //int _index;
   bool isInitialSize = true;
   PreloadPageController _pageController;
-  bool _isFullViewMode = false;
+  bool _isFullViewMode = true;
 
   _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index)
       : _mediaPathList = mediaPathList,
-        _index = index,
+        //_index = index,
         _pageController = PreloadPageController(initialPage: index);
+
+
+  @override
+  void initState() {
+    super.initState();
+    _setSystemOverlay();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: _isFullViewMode
         ? null
         : AppBar(
@@ -50,7 +58,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
           },
           icon: Icon(Icons.arrow_back_ios),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white70,
         elevation: 1.0,
       ),
       body: Center(
@@ -60,11 +68,28 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     );
   }
 
-
   @override
   void dispose() {
     super.dispose();
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
+  }
+
+  void _setSystemOverlay() {
+    if (_isFullViewMode) {
+      SystemChrome.setEnabledSystemUIOverlays ([]);
+    } else {
+      SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
+    }
+  }
+
+  ScrollPhysics _getDefaultScrollPhysics() {
+    if (_isFullViewMode) {
+      return NeverScrollableScrollPhysics();
+    } else {
+      //TODO check ios
+      //return BouncingScrollPhysics();
+      return ClampingScrollPhysics();
+    }
   }
 
   _getPreloadPageView() {
@@ -77,7 +102,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
       pageSnapping: true,
       reverse: false,
       //TODO check scroll
-      //physics: NeverScrollableScrollPhysics(),
+      physics: _getDefaultScrollPhysics(),
       controller: _pageController,
       onPageChanged: (int position) {
         print('page changed. current: $position');
@@ -103,12 +128,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
               setState(() {
                 _isFullViewMode = !_isFullViewMode;
               });
-              if (_isFullViewMode) {
-                SystemChrome.setEnabledSystemUIOverlays ([]);
-              } else {
-                SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
-              }
-
+              _setSystemOverlay();
               //_pageController.jumpToPage(index + 1);
               },
 
