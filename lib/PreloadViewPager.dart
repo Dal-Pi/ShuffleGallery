@@ -114,7 +114,6 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   _getPreloadPageView() {
     return PreloadPageView.builder(
       preloadPagesCount: 5,
-      //scrollDirection: Axis.vertical,
       itemCount: _mediaPathList.length,
       itemBuilder: (BuildContext context, int position) =>
           _getImageView(position),
@@ -129,6 +128,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     );
   }
 
+  //TODO integration with MediaListView's _getImageView
   Widget _getImageView(int position) {
     final int index = position;
     developer.log('position: $position', name: 'SG');

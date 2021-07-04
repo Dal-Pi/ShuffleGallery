@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -26,6 +27,7 @@ class _AlbumListViewState extends State<AlbumListView> {
   int _lastPage = 0;
   List<Widget> _albumThumbnailList = [];
   bool _loading = false;
+  int _thumbnailWidth = 1000;
 
   //TODO remove
   //test
@@ -40,6 +42,9 @@ class _AlbumListViewState extends State<AlbumListView> {
   @override
   void initState() {
     super.initState();
+    developer.log('initState(), window.physicalSize: ${window.physicalSize}', name: 'SG');
+    _thumbnailWidth = window.physicalSize.width ~/ _rowCount.toDouble();
+    developer.log('initState(), _thumbnailWidth: $_thumbnailWidth', name: 'SG');
     _loading = true;
     initAsync();
   }
@@ -64,7 +69,7 @@ class _AlbumListViewState extends State<AlbumListView> {
           } else {
             //TODO check no_thumbnail
             developer.log('_handleScrollEvent(), there is no first media', name:'SG_Log');
-            _firstMediaPathList.add(AssetEntity(id: kNoThumbnailMediaId, typeInt: 1, height: 500, width: 500));
+            _firstMediaPathList.add(AssetEntity(id: kNoThumbnailMediaId, typeInt: 1, height: _thumbnailWidth, width: _thumbnailWidth));
           }
         }
       } else {
@@ -137,7 +142,7 @@ class _AlbumListViewState extends State<AlbumListView> {
         temp.add(
             FutureBuilder<dynamic>(
               //TODO thumb size
-                future: _firstMediaPathList[i].thumbDataWithSize(500, 500),
+                future: _firstMediaPathList[i].thumbDataWithSize(_thumbnailWidth, _thumbnailWidth),
                 builder: (BuildContext context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
                     return Image.memory(

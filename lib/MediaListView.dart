@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:ui';
 import 'dart:io';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:photo_view/photo_view.dart';
 
 import 'package:shuffle_gallery/PreloadViewPager.dart';
 import 'package:shuffle_gallery/Util.dart';
 
 enum AlbumPageType { GRID, LIST }
+
+const int kGridRowCount = 4;
+const int kListRowCount = 1;
 
 class MediaListView extends StatefulWidget {
   final AssetPathEntity _assetPathEntity;
@@ -26,16 +31,21 @@ class _MediaListViewState extends State<MediaListView> {
   List<Widget> _mediaList = [];
   int _currentPage = 0;
   int _lastPage = 0;
-  int _rowCount = 4;
+  AlbumPageType _mode = AlbumPageType.GRID;
+  int _rowCount = kGridRowCount;
   int _viewHeightRatio = 10;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
+  int _thumbnailWidth = 1000;
 
   _MediaListViewState(AssetPathEntity albumPath) : _albumPath = albumPath;
 
   @override
   void initState() {
     super.initState();
+    developer.log('initState(), window.physicalSize: ${window.physicalSize}', name: 'SG');
+    _thumbnailWidth = window.physicalSize.width ~/ _rowCount.toDouble();
+    developer.log('initState(), _thumbnailWidth: $_thumbnailWidth', name: 'SG');
     _loading = true;
     initAsync();
   }
@@ -130,7 +140,7 @@ class _MediaListViewState extends State<MediaListView> {
       for (int i = begin; i < end; ++i) {
         temp.add(FutureBuilder<dynamic>(
             //TODO thumb size
-            future: _mediaPathList[i].thumbDataWithSize(200, 200),
+            future: _mediaPathList[i].thumbDataWithSize(_thumbnailWidth, _thumbnailWidth),
             builder: (BuildContext context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done)
                 return Image.memory(
@@ -181,7 +191,7 @@ class _MediaListViewState extends State<MediaListView> {
       child: CustomScrollView(
         slivers: <Widget>[
           _getSliverActionBar(),
-          _getAlbumGridView(),
+          _getAlbumViewByRowCount(),
         ],
       ),
     );
@@ -195,36 +205,113 @@ class _MediaListViewState extends State<MediaListView> {
       ),
       title: Text(_albumPath.name),
       floating: true,
+      actions: <Widget>[
+        IconButton(
+            icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
+      ],
     );
   }
 
-  _getAlbumGridView() {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _rowCount,
-        mainAxisSpacing: 1.0,
-        crossAxisSpacing: 1.0,
-        //childAspectRatio: 0.66,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
+  _getAlbumModeIcon() {
+    if (_mode == AlbumPageType.LIST) {
+      return Icon(Icons.view_comfy);
+    } else {
+      return Icon(Icons.line_weight);
+    }
+  }
+
+  _onAlbumModeChange() {
+    setState(() {
+      if (_mode == AlbumPageType.LIST) {
+        _rowCount = kGridRowCount;
+        _mode = AlbumPageType.GRID;
+      } else {
+        _rowCount = kListRowCount;
+        _mode = AlbumPageType.LIST;
+      }
+    });
+  }
+
+  _getAlbumViewByRowCount() {
+    if (_rowCount == 1) {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
           return GestureDetector(
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) =>
-                  PreloadViewPager(_mediaPathList, index),
-                ));
+                    PreloadViewPager(_mediaPathList, index),
+              ));
             },
             child: Container(
-              child: Hero(
-                tag: _mediaPathList[index].id.toString(),
-                child : _mediaList[index],
+              padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
+              child: Card(
+                color: Colors.grey[300],
+                elevation: 4.0,
+                clipBehavior: Clip.antiAliasWithSaveLayer,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: AspectRatio(
+                  aspectRatio: _mediaPathList[index].width / _mediaPathList[index].height,
+                  child: _getImageView(index),//_mediaList[index],
+                ),
               ),
             ),
           );
-        },
-        childCount: _mediaList.length,
-      ),
+        }, childCount: _mediaList.length),
+      );
+    } else {
+      return SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _rowCount,
+          mainAxisSpacing: 1.0,
+          crossAxisSpacing: 1.0,
+          //childAspectRatio: 0.66,
+        ),
+        delegate: SliverChildBuilderDelegate(
+              (context, index) {
+            return GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) =>
+                      PreloadViewPager(_mediaPathList, index),
+                ));
+              },
+              child: Container(
+                //TODO use hero
+                child: Hero(
+                  tag: _mediaPathList[index].id.toString(),
+                  child : _mediaList[index],
+                ),
+              ),
+            );
+          },
+          childCount: _mediaList.length,
+        ),
+      );
+    }
+  }
+
+  //TODO integration with PreloadViewPager's _getImageView
+  Widget _getImageView(int position) {
+    final int index = position;
+    developer.log('position: $position', name: 'SG');
+    return FutureBuilder<File?>(
+      future: _mediaPathList[index].file,
+      builder: (BuildContext context, snapshot) {
+        if (snapshot.hasData == false || snapshot.hasError) {
+          //TODO handle error
+          return Image.asset('images/no_thumb.png');
+        } else {
+          return PhotoView(
+                imageProvider: FileImage(
+                  snapshot.data as File,
+                ),
+                backgroundDecoration: BoxDecoration(color: Colors.white,),
+              );
+        }
+      },
     );
   }
 }
