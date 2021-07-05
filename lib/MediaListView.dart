@@ -10,8 +10,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:shuffle_gallery/PreloadViewPager.dart';
 import 'package:shuffle_gallery/Util.dart';
 
-enum AlbumPageType { GRID, LIST }
-
+const int kMaxRowCount = 8;
 const int kGridRowCount = 4;
 const int kListRowCount = 1;
 
@@ -31,12 +30,13 @@ class _MediaListViewState extends State<MediaListView> {
   List<Widget> _mediaList = [];
   int _currentPage = 0;
   int _lastPage = 0;
-  AlbumPageType _mode = AlbumPageType.GRID;
   int _rowCount = kGridRowCount;
   int _viewHeightRatio = 10;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
   int _thumbnailWidth = 1000;
+  double _baseViewScale = 1.0;
+  double _updatedViewScale = 1.0;
 
   _MediaListViewState(AssetPathEntity albumPath) : _albumPath = albumPath;
 
@@ -183,16 +183,41 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   _getAlbumView() {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification scroll) {
-        _handleScrollEvent(scroll);
-        return true;
+    return GestureDetector(
+      //TODO zoomin out
+      onScaleStart: (ScaleStartDetails details) {
+        _baseViewScale = _updatedViewScale;
+        print(_baseViewScale);
       },
-      child: CustomScrollView(
-        slivers: <Widget>[
-          _getSliverActionBar(),
-          _getAlbumViewByRowCount(),
-        ],
+      onScaleUpdate: (ScaleUpdateDetails details) {
+        _updatedViewScale = _baseViewScale * details.scale;
+      },
+      onScaleEnd: (details) {
+        print(_updatedViewScale);
+        print(details);
+        setState(() {
+          double ratio = _updatedViewScale / _baseViewScale;
+          print(ratio);
+          if (details.pointerCount == 1) {
+            if (ratio > 1.2) {
+              _rowCount = _rowCount > 1 ? _rowCount - 1 : _rowCount;
+            } else if (ratio < 0.8) {
+              _rowCount = _rowCount < kMaxRowCount ? _rowCount + 1 : _rowCount;
+            }
+          }
+        });
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scroll) {
+          _handleScrollEvent(scroll);
+          return true;
+        },
+        child: CustomScrollView(
+          slivers: <Widget>[
+            _getSliverActionBar(),
+            _getAlbumViewByRowCount(),
+          ],
+        ),
       ),
     );
   }
@@ -213,7 +238,7 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   _getAlbumModeIcon() {
-    if (_mode == AlbumPageType.LIST) {
+    if (_rowCount == kListRowCount) {
       return Icon(Icons.view_comfy);
     } else {
       return Icon(Icons.line_weight);
@@ -222,12 +247,10 @@ class _MediaListViewState extends State<MediaListView> {
 
   _onAlbumModeChange() {
     setState(() {
-      if (_mode == AlbumPageType.LIST) {
+      if (_rowCount == kListRowCount) {
         _rowCount = kGridRowCount;
-        _mode = AlbumPageType.GRID;
       } else {
         _rowCount = kListRowCount;
-        _mode = AlbumPageType.LIST;
       }
     });
   }
@@ -304,12 +327,7 @@ class _MediaListViewState extends State<MediaListView> {
           //TODO handle error
           return Image.asset('images/no_thumb.png');
         } else {
-          return PhotoView(
-                imageProvider: FileImage(
-                  snapshot.data as File,
-                ),
-                backgroundDecoration: BoxDecoration(color: Colors.white,),
-              );
+          return Image.file(snapshot.data as File,);
         }
       },
     );

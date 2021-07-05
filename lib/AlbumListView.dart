@@ -152,7 +152,7 @@ class _AlbumListViewState extends State<AlbumListView> {
                   }
                   else {
                     //TODO this case
-                    return Image.asset('images/no_thumb.png');
+                    return Container(color: Colors.grey);
                   }
                 }
             )
