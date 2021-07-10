@@ -300,6 +300,25 @@ class _MediaListViewState extends State<MediaListView> {
     });
   }
 
+  double _getAspectRatioByOrientation(int index) {
+    if ((_targetMediaPathList[index].orientation == 90)
+        || (_targetMediaPathList[index].orientation == 270)) {
+      return _targetMediaPathList[index].height / _targetMediaPathList[index].width;
+    } else {
+      return _targetMediaPathList[index].width / _targetMediaPathList[index].height;
+    }
+  }
+
+  _getImageByExtension(int index) {
+    developer.log('title: ${_targetMediaPathList[index].title}', name: 'SG');
+    //TODO gif hardcoding
+    if (_targetMediaPathList[index].title!.endsWith("gif")) {
+      return _getImageView(index);
+    } else {
+      return _preloadedImageMap[_targetMediaPathList[index].id] ?? Container();
+    }
+  }
+
   _getAlbumViewByRowCount() {
     if (_rowCount == 1) {
       return SliverList(
@@ -321,8 +340,8 @@ class _MediaListViewState extends State<MediaListView> {
                   borderRadius: BorderRadius.circular(10.0),
                 ),
                 child: AspectRatio(
-                  aspectRatio: _targetMediaPathList[index].width / _targetMediaPathList[index].height,
-                  child: _getImageView(index),//_mediaList[index],
+                  aspectRatio: _getAspectRatioByOrientation(index),
+                  child: _getImageByExtension(index),
                 ),
               ),
             ),
@@ -350,6 +369,7 @@ class _MediaListViewState extends State<MediaListView> {
                 //TODO use hero
                 child: Hero(
                   tag: _targetMediaPathList[index].id.toString(),
+                  //TODO distinguish filetype (gif etc)..
                   child : _preloadedImageMap[_targetMediaPathList[index].id] ?? Container(),
                 ),
               ),
