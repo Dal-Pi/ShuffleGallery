@@ -14,6 +14,10 @@ const int kMaxRowCount = 8;
 const int kGridRowCount = 4;
 const int kListRowCount = 1;
 
+enum ShuffleMode {
+  Sequential, Random,
+}
+
 class MediaListView extends StatefulWidget {
   final AssetPathEntity _assetPathEntity;
   MediaListView(AssetPathEntity assetPathEntity)
@@ -24,10 +28,15 @@ class MediaListView extends StatefulWidget {
 }
 
 class _MediaListViewState extends State<MediaListView> {
+
   bool _loading = false;
   final AssetPathEntity _albumPath;
-  List<AssetEntity> _mediaPathList = [];
-  List<Widget> _mediaList = [];
+  List<AssetEntity> _sequentialMediaPathList = [];
+  List<AssetEntity> _randomMediaPathList = [];
+  List<AssetEntity> _targetMediaPathList = [];
+  ShuffleMode _shuffleMode = ShuffleMode.Random;
+  Map<String, Widget> _preloadedImageMap = {};
+  List<Widget> _removed_mediaList = [];
   int _currentPage = 0;
   int _lastPage = 0;
   int _rowCount = kGridRowCount;
@@ -55,8 +64,9 @@ class _MediaListViewState extends State<MediaListView> {
       developer.log(
           'initAsync(), _albumPath.assetCount: ${_albumPath.assetCount}',
           name: 'SG');
-      _mediaPathList = shuffle(await _albumPath.getAssetListRange(
-          start: 0, end: _albumPath.assetCount));
+      _sequentialMediaPathList = await _albumPath.getAssetListRange(
+          start: 0, end: _albumPath.assetCount);
+      _changeShuffleMode();
       _fetchMoreMediaThumbnail();
       setState(() {
         //TODO index check
@@ -66,6 +76,17 @@ class _MediaListViewState extends State<MediaListView> {
     setState(() {
       _loading = false;
     });
+  }
+
+  _changeShuffleMode() {
+    if (_shuffleMode == ShuffleMode.Random) {
+      if (_sequentialMediaPathList.length != _randomMediaPathList.length) {
+        _randomMediaPathList = List.from(_sequentialMediaPathList);
+      }
+      _targetMediaPathList = shuffle(_randomMediaPathList);
+    } else { // ShuffleMode.Sequential
+      _targetMediaPathList = _sequentialMediaPathList;
+    }
   }
 
   _handleScrollEvent(ScrollNotification scroll) {
@@ -125,7 +146,7 @@ class _MediaListViewState extends State<MediaListView> {
       final int loadingItemCount = _rowCount * _rowCount * _viewHeightRatio;
       developer.log('_fetchMoreMediaThumbnail(), loadingItemCount: $loadingItemCount',
           name: 'SG');
-      int begin = _mediaList.length;
+      int begin = _preloadedImageMap.length;
       int end = begin;
       if (begin + loadingItemCount > _albumPath.assetCount) {
         end = _albumPath.assetCount;
@@ -136,11 +157,12 @@ class _MediaListViewState extends State<MediaListView> {
             name: 'SG');
       }
 
-      List<Widget> temp = [];
+      //List<Widget> temp = [];
+      Map<String, Widget> temp = {};
       for (int i = begin; i < end; ++i) {
-        temp.add(FutureBuilder<dynamic>(
+        temp[_targetMediaPathList[i].id] = (FutureBuilder<dynamic>(
             //TODO thumb size
-            future: _mediaPathList[i].thumbDataWithSize(_thumbnailWidth, _thumbnailWidth),
+            future: _targetMediaPathList[i].thumbDataWithSize(_thumbnailWidth, _thumbnailWidth),
             builder: (BuildContext context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done)
                 return Image.memory(
@@ -156,8 +178,8 @@ class _MediaListViewState extends State<MediaListView> {
         if (temp.length > 0) {
           developer.log('_fetchMoreMediaThumbnail(), loaded temp.length: ${temp.length}',
               name: 'SG');
-          _mediaList.addAll(temp);
-          developer.log('_fetchMoreMediaThumbnail(), _mediaList: ${_mediaList.length}',
+          _preloadedImageMap.addAll(temp);
+          developer.log('_fetchMoreMediaThumbnail(), _mediaList: ${_preloadedImageMap.length}',
               name: 'SG');
           _currentPage++;
         } else {
@@ -183,6 +205,7 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   _getAlbumView() {
+    //developer.log('_getAlbumView called', name: 'SG');
     return GestureDetector(
       //TODO zoomin out
       onScaleStart: (ScaleStartDetails details) {
@@ -232,6 +255,8 @@ class _MediaListViewState extends State<MediaListView> {
       floating: true,
       actions: <Widget>[
         IconButton(
+            icon: _getShuffleIcon(), onPressed: () => _onShuffleModeChanged()),
+        IconButton(
             icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
       ],
     );
@@ -255,6 +280,26 @@ class _MediaListViewState extends State<MediaListView> {
     });
   }
 
+  _getShuffleIcon() {
+    if (_shuffleMode == ShuffleMode.Random) {
+      return Icon(Icons.sort);
+    } else {
+      return Icon(Icons.shuffle);
+    }
+  }
+
+  _onShuffleModeChanged() {
+    //developer.log('_onShuffleModeChanged', name: 'SG');
+    setState(() {
+      if (_shuffleMode == ShuffleMode.Random) {
+        _shuffleMode = ShuffleMode.Sequential;
+      } else {
+        _shuffleMode = ShuffleMode.Random;
+      }
+      _changeShuffleMode();
+    });
+  }
+
   _getAlbumViewByRowCount() {
     if (_rowCount == 1) {
       return SliverList(
@@ -263,7 +308,7 @@ class _MediaListViewState extends State<MediaListView> {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) =>
-                    PreloadViewPager(_mediaPathList, index),
+                    PreloadViewPager(_targetMediaPathList, index),
               ));
             },
             child: Container(
@@ -276,13 +321,13 @@ class _MediaListViewState extends State<MediaListView> {
                   borderRadius: BorderRadius.circular(10.0),
                 ),
                 child: AspectRatio(
-                  aspectRatio: _mediaPathList[index].width / _mediaPathList[index].height,
+                  aspectRatio: _targetMediaPathList[index].width / _targetMediaPathList[index].height,
                   child: _getImageView(index),//_mediaList[index],
                 ),
               ),
             ),
           );
-        }, childCount: _mediaList.length),
+        }, childCount: _preloadedImageMap.length),
       );
     } else {
       return SliverGrid(
@@ -298,19 +343,19 @@ class _MediaListViewState extends State<MediaListView> {
               onTap: () {
                 Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) =>
-                      PreloadViewPager(_mediaPathList, index),
+                      PreloadViewPager(_targetMediaPathList, index),
                 ));
               },
               child: Container(
                 //TODO use hero
                 child: Hero(
-                  tag: _mediaPathList[index].id.toString(),
-                  child : _mediaList[index],
+                  tag: _targetMediaPathList[index].id.toString(),
+                  child : _preloadedImageMap[_targetMediaPathList[index].id] ?? Container(),
                 ),
               ),
             );
           },
-          childCount: _mediaList.length,
+          childCount: _preloadedImageMap.length,
         ),
       );
     }
@@ -321,7 +366,7 @@ class _MediaListViewState extends State<MediaListView> {
     final int index = position;
     developer.log('position: $position', name: 'SG');
     return FutureBuilder<File?>(
-      future: _mediaPathList[index].file,
+      future: _targetMediaPathList[index].file,
       builder: (BuildContext context, snapshot) {
         if (snapshot.hasData == false || snapshot.hasError) {
           //TODO handle error

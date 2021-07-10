@@ -108,7 +108,7 @@ packages:
       name: photo_manager
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.2.4"
+    version: "1.2.5"
   photo_view:
     dependency: "direct main"
     description:
@@ -122,7 +122,7 @@ packages:
       name: plugin_platform_interface
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.0.0"
+    version: "2.0.1"
   preload_page_view:
     dependency: "direct main"
     description:
