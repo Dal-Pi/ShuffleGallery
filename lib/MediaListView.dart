@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui';
 import 'dart:io';
 import 'dart:developer' as developer;
@@ -28,7 +29,6 @@ class MediaListView extends StatefulWidget {
 }
 
 class _MediaListViewState extends State<MediaListView> {
-
   bool _loading = false;
   final AssetPathEntity _albumPath;
   List<AssetEntity> _sequentialMediaPathList = [];
@@ -36,14 +36,16 @@ class _MediaListViewState extends State<MediaListView> {
   List<AssetEntity> _targetMediaPathList = [];
   ShuffleMode _shuffleMode = ShuffleMode.Random;
   Map<String, Widget> _preloadedImageMap = {};
-  List<Widget> _removed_mediaList = [];
+  Map<String, int> _preloadedImageWidthMap = {};
   int _currentPage = 0;
   int _lastPage = 0;
+  //TODO rowCount setter
   int _rowCount = kGridRowCount;
   int _viewHeightRatio = 10;
   double _prevMaxScrollExtent = 0.0;
   double _nextLoadingScrollTarget = 0.0;
-  int _thumbnailWidth = 1000;
+  int _thumbnailWidthByRow = 200;
+  double _deviceWidthInLP = 800;
   double _baseViewScale = 1.0;
   double _updatedViewScale = 1.0;
 
@@ -52,9 +54,8 @@ class _MediaListViewState extends State<MediaListView> {
   @override
   void initState() {
     super.initState();
-    developer.log('initState(), window.physicalSize: ${window.physicalSize}', name: 'SG');
-    _thumbnailWidth = window.physicalSize.width ~/ _rowCount.toDouble();
-    developer.log('initState(), _thumbnailWidth: $_thumbnailWidth', name: 'SG');
+    _renewalThumbWidth();
+
     _loading = true;
     initAsync();
   }
@@ -76,6 +77,31 @@ class _MediaListViewState extends State<MediaListView> {
     setState(() {
       _loading = false;
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+    //   systemNavigationBarColor: Colors.blue, // navigation bar color
+    //   statusBarColor: Colors.white, // status bar color
+    // ));
+    developer.log('** build cache size = ${_preloadedImageMap.length}', name: 'SG');
+    _deviceWidthInLP = MediaQuery.of(context).size.width;
+    developer.log('** build _deviceWidthInLP $_deviceWidthInLP', name: 'SG');
+    _renewalThumbWidth();
+
+    return Scaffold(
+      body: _loading
+          ? Center(
+        child: CircularProgressIndicator(),
+      )
+          : _getAlbumView(),
+    );
+  }
+
+  void _renewalThumbWidth() {
+    _thumbnailWidthByRow = _deviceWidthInLP ~/ _rowCount;
+    developer.log('initState(), _renewalThumbWidth _thumbnailWidthByRow: $_thumbnailWidthByRow', name: 'SG');
   }
 
   _changeShuffleMode() {
@@ -136,50 +162,94 @@ class _MediaListViewState extends State<MediaListView> {
     // }
   }
 
-  //test
+  Widget _getEmptyView() {
+    return Container(color: Colors.grey);
+  }
+
+  bool _needToReloadThumbnail(String id) {
+    var currentWidth = _preloadedImageWidthMap[id] ?? _thumbnailWidthByRow;
+    developer.log('_needToReloadThumbnail currentWidth = $currentWidth , _thumbnailWidthByRow = $_thumbnailWidthByRow', name: 'SG');
+    return currentWidth < _thumbnailWidthByRow;
+  }
+
+  Widget _getThumbnailView(AssetEntity mediaEntity) {
+    return FutureBuilder<dynamic>(
+      future: mediaEntity.thumbDataWithSize(
+        _thumbnailWidthByRow,
+        (_thumbnailWidthByRow.toDouble() * _getRatioByOrientation(mediaEntity)).toInt()),
+      builder: (BuildContext context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          developer.log('_getThumbnailView ${mediaEntity.title} with width = $_thumbnailWidthByRow', name: 'SG');
+          return Image.memory(
+            snapshot.data,
+            fit: BoxFit.cover,
+          );
+        } else {
+          return _getEmptyView();
+        }
+      }
+    );
+  }
+
+  //TODO logic can be arranged
+  Widget _getThumbnailViewByCache(AssetEntity mediaEntity) {
+    if (_preloadedImageMap.containsKey(mediaEntity.id)) {
+      if (_needToReloadThumbnail(mediaEntity.id) == false) {
+        developer.log('_getThumbnailViewByCache cache case : ${mediaEntity.title}', name: 'SG');
+        //TODO debug color
+        return _preloadedImageMap[mediaEntity.id] ?? Container(color: Colors.blue);//_getEmptyView();
+      } else {
+        developer.log('_getThumbnailViewByCache re-load case : ${mediaEntity.title}', name: 'SG');
+        _preloadedImageMap[mediaEntity.id] = _getThumbnailView(mediaEntity);
+        _preloadedImageWidthMap[mediaEntity.id] = max(_preloadedImageWidthMap[mediaEntity.id] ?? _thumbnailWidthByRow, _thumbnailWidthByRow);
+        //TODO debug color
+        return _preloadedImageMap[mediaEntity.id] ?? Container(color: Colors.green);//_getEmptyView();
+      }
+    } else {
+      developer.log('_getThumbnailViewByCache load case : ${mediaEntity.title}', name: 'SG');
+      _preloadedImageMap[mediaEntity.id] = _getThumbnailView(mediaEntity);
+      _preloadedImageWidthMap[mediaEntity.id] = max(_preloadedImageWidthMap[mediaEntity.id] ?? _thumbnailWidthByRow, _thumbnailWidthByRow);
+      //TODO debug color
+      return _preloadedImageMap[mediaEntity.id] ?? Container(color: Colors.red);//_getEmptyView();
+    }
+  }
+
   _fetchMoreMediaThumbnail() async {
     developer.log(
         '_fetchMoreMediaThumbnail(), _lastPage: $_lastPage, _currentPage $_currentPage',
         name: 'SG');
     _lastPage = _currentPage;
     if (await promptPermissionSetting()) {
-      final int loadingItemCount = _rowCount * _rowCount * _viewHeightRatio;
-      developer.log('_fetchMoreMediaThumbnail(), loadingItemCount: $loadingItemCount',
+      final int targetLoadingItemCount = _rowCount * _rowCount * _viewHeightRatio;
+      developer.log('_fetchMoreMediaThumbnail(), targetLoadingItemCount: $targetLoadingItemCount',
           name: 'SG');
       int begin = _preloadedImageMap.length;
       int end = begin;
-      if (begin + loadingItemCount > _albumPath.assetCount) {
+      if (begin + targetLoadingItemCount > _albumPath.assetCount) {
         end = _albumPath.assetCount;
-        developer.log('_fetchMoreMediaThumbnail(), end is assetCount: $end', name: 'SG');
+        developer.log('_fetchMoreMediaThumbnail(), but end is assetCount: $end', name: 'SG');
       } else {
-        end += loadingItemCount;
-        developer.log('_fetchMoreMediaThumbnail(), end is added loadingItemCount: $end',
+        end += targetLoadingItemCount;
+        developer.log('_fetchMoreMediaThumbnail(), so end is added loadingItemCount: $end',
             name: 'SG');
       }
 
       //List<Widget> temp = [];
       Map<String, Widget> temp = {};
+      Map<String, int> tempWidth = {};
       for (int i = begin; i < end; ++i) {
-        temp[_targetMediaPathList[i].id] = (FutureBuilder<dynamic>(
-            //TODO thumb size
-            future: _targetMediaPathList[i].thumbDataWithSize(_thumbnailWidth, _thumbnailWidth),
-            builder: (BuildContext context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done)
-                return Image.memory(
-                  snapshot.data,
-                  fit: BoxFit.cover,
-                );
-              else
-                //TODO this case
-                return Container();
-            }));
+        temp[_targetMediaPathList[i].id] =
+            //_getThumbnailView(_targetMediaPathList[i]);
+            _getThumbnailViewByCache(_targetMediaPathList[i]);
+        tempWidth[_targetMediaPathList[i].id] = _thumbnailWidthByRow;
       }
       setState(() {
         if (temp.length > 0) {
           developer.log('_fetchMoreMediaThumbnail(), loaded temp.length: ${temp.length}',
               name: 'SG');
           _preloadedImageMap.addAll(temp);
-          developer.log('_fetchMoreMediaThumbnail(), _mediaList: ${_preloadedImageMap.length}',
+          _preloadedImageWidthMap.addAll(tempWidth);
+          developer.log('_fetchMoreMediaThumbnail(), _mediaList.length: ${_preloadedImageMap.length}',
               name: 'SG');
           _currentPage++;
         } else {
@@ -189,44 +259,31 @@ class _MediaListViewState extends State<MediaListView> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    //   systemNavigationBarColor: Colors.blue, // navigation bar color
-    //   statusBarColor: Colors.white, // status bar color
-    // ));
-    return Scaffold(
-        body: _loading
-            ? Center(
-                child: CircularProgressIndicator(),
-              )
-            : _getAlbumView(),
-      );
-  }
-
   _getAlbumView() {
     //developer.log('_getAlbumView called', name: 'SG');
     return GestureDetector(
       //TODO zoomin out
       onScaleStart: (ScaleStartDetails details) {
         _baseViewScale = _updatedViewScale;
-        print(_baseViewScale);
+        //print(_baseViewScale);
       },
       onScaleUpdate: (ScaleUpdateDetails details) {
         _updatedViewScale = _baseViewScale * details.scale;
       },
       onScaleEnd: (details) {
-        print(_updatedViewScale);
-        print(details);
+        //print(_updatedViewScale);
+        //print(details);
+        //TODO arrange
         setState(() {
           double ratio = _updatedViewScale / _baseViewScale;
-          print(ratio);
+          //print(ratio);
           if (details.pointerCount == 1) {
             if (ratio > 1.2) {
               _rowCount = _rowCount > 1 ? _rowCount - 1 : _rowCount;
             } else if (ratio < 0.8) {
               _rowCount = _rowCount < kMaxRowCount ? _rowCount + 1 : _rowCount;
             }
+            _renewalThumbWidth();
           }
         });
       },
@@ -300,6 +357,21 @@ class _MediaListViewState extends State<MediaListView> {
     });
   }
 
+  //TODO integrate _getAspectRatioByOrientation
+  double _getRatioByOrientation(AssetEntity mediaEntity) {
+    var width = mediaEntity.width;
+    var height = mediaEntity.height;
+    var orientation = mediaEntity.orientation;
+
+    if ((orientation == 90)
+        || (orientation == 270)) {
+      return height / width;
+    } else {
+      return width / height;
+    }
+  }
+
+  //TODO integrate _getRatioByOrientation
   double _getAspectRatioByOrientation(int index) {
     if ((_targetMediaPathList[index].orientation == 90)
         || (_targetMediaPathList[index].orientation == 270)) {
@@ -310,12 +382,13 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   _getImageByExtension(int index) {
-    developer.log('title: ${_targetMediaPathList[index].title}', name: 'SG');
     //TODO gif hardcoding
     if (_targetMediaPathList[index].title!.endsWith("gif")) {
+      developer.log('_getImageByExtension gif case : ${_targetMediaPathList[index].title}', name: 'SG');
       return _getImageView(index);
     } else {
-      return _preloadedImageMap[_targetMediaPathList[index].id] ?? Container();
+      developer.log('_getImageByExtension normal case : ${_targetMediaPathList[index].title}', name: 'SG');
+      return _getThumbnailViewByCache(_targetMediaPathList[index]);
     }
   }
 
@@ -370,7 +443,7 @@ class _MediaListViewState extends State<MediaListView> {
                 child: Hero(
                   tag: _targetMediaPathList[index].id.toString(),
                   //TODO distinguish filetype (gif etc)..
-                  child : _preloadedImageMap[_targetMediaPathList[index].id] ?? Container(),
+                  child: _getThumbnailViewByCache(_targetMediaPathList[index]),
                 ),
               ),
             );
