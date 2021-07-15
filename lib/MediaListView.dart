@@ -68,11 +68,11 @@ class _MediaListViewState extends State<MediaListView> {
       _sequentialMediaPathList = await _albumPath.getAssetListRange(
           start: 0, end: _albumPath.assetCount);
       _changeShuffleMode();
-      _fetchMoreMediaThumbnail();
       setState(() {
         //TODO index check
         _loading = false;
       });
+      _fetchMoreMediaThumbnail();
     }
     setState(() {
       _loading = false;
@@ -101,6 +101,7 @@ class _MediaListViewState extends State<MediaListView> {
 
   void _renewalThumbWidth() {
     _thumbnailWidthByRow = _deviceWidthInLP ~/ _rowCount;
+    _thumbnailWidthByRow *= 2;
     developer.log('initState(), _renewalThumbWidth _thumbnailWidthByRow: $_thumbnailWidthByRow', name: 'SG');
   }
 
@@ -163,7 +164,9 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   Widget _getEmptyView() {
-    return Container(color: Colors.grey);
+    //test
+    return Container(color: Colors.red);
+    //return Container(color: Colors.grey);
   }
 
   bool _needToReloadThumbnail(String id) {
@@ -179,12 +182,13 @@ class _MediaListViewState extends State<MediaListView> {
         (_thumbnailWidthByRow.toDouble() * _getRatioByOrientation(mediaEntity)).toInt()),
       builder: (BuildContext context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          developer.log('_getThumbnailView ${mediaEntity.title} with width = $_thumbnailWidthByRow', name: 'SG');
+          developer.log('_getThumbnailView FutureBuilder ${mediaEntity.title} with width = $_thumbnailWidthByRow', name: 'SG');
           return Image.memory(
             snapshot.data,
             fit: BoxFit.cover,
           );
         } else {
+          developer.log('_getThumbnailView FutureBuilder ${mediaEntity.title} empty view', name: 'SG');
           return _getEmptyView();
         }
       }
@@ -283,9 +287,9 @@ class _MediaListViewState extends State<MediaListView> {
             } else if (ratio < 0.8) {
               _rowCount = _rowCount < kMaxRowCount ? _rowCount + 1 : _rowCount;
             }
-            _renewalThumbWidth();
           }
         });
+        _renewalThumbWidth();
       },
       child: NotificationListener<ScrollNotification>(
         onNotification: (ScrollNotification scroll) {
