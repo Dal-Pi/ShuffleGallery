@@ -164,14 +164,12 @@ class _MediaListViewState extends State<MediaListView> {
   }
 
   Widget _getEmptyView() {
-    //test
-    return Container(color: Colors.red);
-    //return Container(color: Colors.grey);
+    return Container(color: Colors.grey);
   }
 
   bool _needToReloadThumbnail(String id) {
     var currentWidth = _preloadedImageWidthMap[id] ?? _thumbnailWidthByRow;
-    developer.log('_needToReloadThumbnail currentWidth = $currentWidth , _thumbnailWidthByRow = $_thumbnailWidthByRow', name: 'SG');
+    //developer.log('_needToReloadThumbnail currentWidth = $currentWidth , _thumbnailWidthByRow = $_thumbnailWidthByRow', name: 'SG');
     return currentWidth < _thumbnailWidthByRow;
   }
 
@@ -183,10 +181,13 @@ class _MediaListViewState extends State<MediaListView> {
       builder: (BuildContext context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           developer.log('_getThumbnailView FutureBuilder ${mediaEntity.title} with width = $_thumbnailWidthByRow', name: 'SG');
-          return Image.memory(
+          var thumbnail = Image.memory(
             snapshot.data,
             fit: BoxFit.cover,
           );
+          //save to cache
+          _preloadedImageMap[mediaEntity.id] = thumbnail;
+          return thumbnail;
         } else {
           developer.log('_getThumbnailView FutureBuilder ${mediaEntity.title} empty view', name: 'SG');
           return _getEmptyView();
@@ -388,10 +389,10 @@ class _MediaListViewState extends State<MediaListView> {
   _getImageByExtension(int index) {
     //TODO gif hardcoding
     if (_targetMediaPathList[index].title!.endsWith("gif")) {
-      developer.log('_getImageByExtension gif case : ${_targetMediaPathList[index].title}', name: 'SG');
+      //developer.log('_getImageByExtension gif case : ${_targetMediaPathList[index].title}', name: 'SG');
       return _getImageView(index);
     } else {
-      developer.log('_getImageByExtension normal case : ${_targetMediaPathList[index].title}', name: 'SG');
+      //developer.log('_getImageByExtension normal case : ${_targetMediaPathList[index].title}', name: 'SG');
       return _getThumbnailViewByCache(_targetMediaPathList[index]);
     }
   }
@@ -410,7 +411,7 @@ class _MediaListViewState extends State<MediaListView> {
             child: Container(
               padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
               child: Card(
-                color: Colors.grey[300],
+                color: Colors.white,
                 elevation: 4.0,
                 clipBehavior: Clip.antiAliasWithSaveLayer,
                 shape: RoundedRectangleBorder(
@@ -443,12 +444,8 @@ class _MediaListViewState extends State<MediaListView> {
                 ));
               },
               child: Container(
-                //TODO use hero
-                child: Hero(
-                  tag: _targetMediaPathList[index].id.toString(),
-                  //TODO distinguish filetype (gif etc)..
-                  child: _getThumbnailViewByCache(_targetMediaPathList[index]),
-                ),
+                //TODO distinguish filetype (gif etc)..
+                child: _getThumbnailViewByCache(_targetMediaPathList[index]),
               ),
             );
           },
