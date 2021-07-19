@@ -10,22 +10,26 @@ import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 
 class PreloadViewPager extends StatefulWidget {
-  List<AssetEntity> _mediaPathEntityList;
-  int _initialIndex;
+  final List<AssetEntity> _mediaPathEntityList;
+  final int _initialIndex;
 
-  PreloadViewPager(List<AssetEntity> mediaPathEntityList, index)
+  final Widget _thumbnail;
+
+  PreloadViewPager(List<AssetEntity> mediaPathEntityList, int index
+      , Widget thumbnail)
       : _mediaPathEntityList = mediaPathEntityList,
-        _initialIndex = index {
+        _initialIndex = index,
+        _thumbnail = thumbnail {
     developer.log('index: $index', name: 'SG');
   }
 
   @override
   _PreloadViewPagerState createState() =>
-      _PreloadViewPagerState(_mediaPathEntityList, _initialIndex);
+      _PreloadViewPagerState(_mediaPathEntityList, _initialIndex, _thumbnail);
 }
 
 class _PreloadViewPagerState extends State<PreloadViewPager> {
-  List<AssetEntity> _mediaPathList;
+  final List<AssetEntity> _mediaPathList;
   //int _index;
   bool isInitialSize = true;
   PreloadPageController _pageController;
@@ -35,9 +39,12 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   //  PhotoViewScaleStateController();
   PhotoViewScaleState _currentScaleState = PhotoViewScaleState.initial;
 
-  _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index)
+  final Widget _thumbnail;
+
+  _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index, Widget thumbnail)
       : _mediaPathList = mediaPathList,
         //_index = index,
+        _thumbnail = thumbnail,
         _pageController = PreloadPageController(initialPage: index);
 
   @override
@@ -51,6 +58,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: _isFullViewMode
@@ -130,7 +138,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
 
   Widget _getImageView(int position) {
     final int index = position;
-    developer.log('position: $position', name: 'SG');
+    //developer.log('position: $position', name: 'SG');
     // return PhotoView(
     //   imageProvider:
     return FutureBuilder<File?>(
@@ -138,7 +146,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
       builder: (BuildContext context, snapshot) {
         if (snapshot.hasData == false || snapshot.hasError) {
           //TODO handle error
-          return Container(color: Colors.red);
+          return Container(color: Colors.grey);
         } else {
           return GestureDetector(
             //TODO change action
@@ -155,12 +163,10 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
                   imageProvider: FileImage(
                     snapshot.data as File,
                   ),
-                  // loadingBuilder: (context, event) => Center(
-                  //   child: Container(
-                  //     child: CircularProgressIndicator(
-                  //     ),
-                  //   ),
-                  // ),
+                  loadingBuilder: (context, event) => FittedBox(
+                    child: _thumbnail,
+                    fit: BoxFit.contain,
+                  ),
                   backgroundDecoration: BoxDecoration(color: Colors.white,),
                 //controller: _viewController,
                 scaleStateChangedCallback: _viewScaleListener,

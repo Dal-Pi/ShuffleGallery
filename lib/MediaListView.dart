@@ -413,10 +413,18 @@ class _MediaListViewState extends State<MediaListView> {
         delegate: SliverChildBuilderDelegate((context, index) {
           return GestureDetector(
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) =>
-                    PreloadViewPager(_targetMediaPathList, index),
-              ));
+              Navigator.of(context).push(
+                //TODO arrange
+                //   MaterialPageRoute(
+                // builder: (context) =>
+                //     PreloadViewPager(_targetMediaPathList, index,
+                //     _getThumbnailViewByCache(_targetMediaPathList[index])),
+                PageRouteBuilder(
+                  pageBuilder: (c, a1, a2) => PreloadViewPager(_targetMediaPathList, index,_getThumbnailViewByCache(_targetMediaPathList[index])),
+                  //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
+                  transitionDuration: Duration(milliseconds: 0),
+                ),
+              );
             },
             child: Container(
               padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
@@ -429,7 +437,10 @@ class _MediaListViewState extends State<MediaListView> {
                 ),
                 child: AspectRatio(
                   aspectRatio: _getAspectRatioByOrientation(index),
-                  child: _getImageByExtension(_targetMediaPathList[index]),
+                  child: FittedBox(
+                    child: _getImageByExtension(_targetMediaPathList[index]),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -448,10 +459,18 @@ class _MediaListViewState extends State<MediaListView> {
               (context, index) {
             return GestureDetector(
               onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) =>
-                      PreloadViewPager(_targetMediaPathList, index),
-                ));
+                Navigator.of(context).push(
+                  //TODO arrange
+                  //   MaterialPageRoute(
+                  // builder: (context) =>
+                  //     PreloadViewPager(_targetMediaPathList, index,
+                  //       _getThumbnailViewByCache(_targetMediaPathList[index])),
+                  PageRouteBuilder(
+                    pageBuilder: (c, a1, a2) => PreloadViewPager(_targetMediaPathList, index,_getThumbnailViewByCache(_targetMediaPathList[index])),
+                    //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
+                    transitionDuration: Duration(milliseconds: 0),
+                  ),
+                );
               },
               child: Container(
                 //TODO distinguish filetype (gif etc)..
