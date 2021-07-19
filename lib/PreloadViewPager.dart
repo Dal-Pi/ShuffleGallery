@@ -128,7 +128,6 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     );
   }
 
-  //TODO integration with MediaListView's _getImageView
   Widget _getImageView(int position) {
     final int index = position;
     developer.log('position: $position', name: 'SG');
@@ -139,7 +138,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
       builder: (BuildContext context, snapshot) {
         if (snapshot.hasData == false || snapshot.hasError) {
           //TODO handle error
-          return Image.asset('images/no_thumb.png');
+          return Container(color: Colors.red);
         } else {
           return GestureDetector(
             //TODO change action
@@ -156,6 +155,12 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
                   imageProvider: FileImage(
                     snapshot.data as File,
                   ),
+                  // loadingBuilder: (context, event) => Center(
+                  //   child: Container(
+                  //     child: CircularProgressIndicator(
+                  //     ),
+                  //   ),
+                  // ),
                   backgroundDecoration: BoxDecoration(color: Colors.white,),
                 //controller: _viewController,
                 scaleStateChangedCallback: _viewScaleListener,

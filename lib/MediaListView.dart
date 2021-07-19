@@ -15,6 +15,8 @@ const int kMaxRowCount = 8;
 const int kGridRowCount = 4;
 const int kListRowCount = 1;
 
+const String kGifStr = 'gif';
+
 enum ShuffleMode {
   Sequential, Random,
 }
@@ -163,8 +165,17 @@ class _MediaListViewState extends State<MediaListView> {
     // }
   }
 
+  //TODO for debug
+  Widget _getErrorView() {
+    return Container(
+      color: Colors.red,
+    );
+  }
+
   Widget _getEmptyView() {
-    return Container(color: Colors.grey);
+    return Container(
+      color: Colors.grey[300],
+    );
   }
 
   bool _needToReloadThumbnail(String id) {
@@ -215,7 +226,7 @@ class _MediaListViewState extends State<MediaListView> {
       _preloadedImageMap[mediaEntity.id] = _getThumbnailView(mediaEntity);
       _preloadedImageWidthMap[mediaEntity.id] = max(_preloadedImageWidthMap[mediaEntity.id] ?? _thumbnailWidthByRow, _thumbnailWidthByRow);
       //TODO debug color
-      return _preloadedImageMap[mediaEntity.id] ?? Container(color: Colors.red);//_getEmptyView();
+      return _preloadedImageMap[mediaEntity.id] ?? _getErrorView();//_getEmptyView();
     }
   }
 
@@ -386,14 +397,13 @@ class _MediaListViewState extends State<MediaListView> {
     }
   }
 
-  _getImageByExtension(int index) {
-    //TODO gif hardcoding
-    if (_targetMediaPathList[index].title!.endsWith("gif")) {
+  _getImageByExtension(AssetEntity mediaEntity) {
+    if (mediaEntity.title!.endsWith(kGifStr)) {
       //developer.log('_getImageByExtension gif case : ${_targetMediaPathList[index].title}', name: 'SG');
-      return _getImageView(index);
+      return _getGifImageView(mediaEntity);
     } else {
       //developer.log('_getImageByExtension normal case : ${_targetMediaPathList[index].title}', name: 'SG');
-      return _getThumbnailViewByCache(_targetMediaPathList[index]);
+      return _getThumbnailViewByCache(mediaEntity);
     }
   }
 
@@ -419,7 +429,7 @@ class _MediaListViewState extends State<MediaListView> {
                 ),
                 child: AspectRatio(
                   aspectRatio: _getAspectRatioByOrientation(index),
-                  child: _getImageByExtension(index),
+                  child: _getImageByExtension(_targetMediaPathList[index]),
                 ),
               ),
             ),
@@ -445,7 +455,8 @@ class _MediaListViewState extends State<MediaListView> {
               },
               child: Container(
                 //TODO distinguish filetype (gif etc)..
-                child: _getThumbnailViewByCache(_targetMediaPathList[index]),
+                //child: _getThumbnailViewByCache(_targetMediaPathList[index]),
+                child: _getImageByExtension(_targetMediaPathList[index]),
               ),
             );
           },
@@ -455,18 +466,57 @@ class _MediaListViewState extends State<MediaListView> {
     }
   }
 
-  //TODO integration with PreloadViewPager's _getImageView
-  Widget _getImageView(int position) {
-    final int index = position;
-    developer.log('position: $position', name: 'SG');
+  Widget _getGifImageView(AssetEntity mediaEntity) {
+    if (_rowCount == kListRowCount) {
+      return _getGifImage(mediaEntity);
+    } else { //gridview
+      //TODO separate for adding play button
+      return Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            child: _getThumbnailViewByCache(mediaEntity),
+          ),
+
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Padding(
+              padding: EdgeInsets.all(5.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(7.0),
+                child: Container(
+                  color: Colors.grey.withOpacity(0.5),
+                  child: Padding(
+                    padding: EdgeInsets.all(3.0),
+                    child: Text(
+                      kGifStr.toUpperCase(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _getGifImage(AssetEntity mediaEntity) {
     return FutureBuilder<File?>(
-      future: _targetMediaPathList[index].file,
+      future: mediaEntity.file,
       builder: (BuildContext context, snapshot) {
         if (snapshot.hasData == false || snapshot.hasError) {
-          //TODO handle error
-          return Image.asset('images/no_thumb.png');
+          return _getEmptyView();
         } else {
-          return Image.file(snapshot.data as File,);
+          return Image.file(
+            snapshot.data as File,
+          );
         }
       },
     );
