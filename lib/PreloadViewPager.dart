@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:preload_page_view/preload_page_view.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PreloadViewPager extends StatefulWidget {
   final List<AssetEntity> _mediaPathEntityList;
@@ -38,6 +39,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   //PhotoViewScaleStateController _viewScaleStateController =
   //  PhotoViewScaleStateController();
   PhotoViewScaleState _currentScaleState = PhotoViewScaleState.initial;
+  int _currentIndex;
 
   final Widget _thumbnail;
 
@@ -45,7 +47,8 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
       : _mediaPathList = mediaPathList,
         //_index = index,
         _thumbnail = thumbnail,
-        _pageController = PreloadPageController(initialPage: index);
+        _pageController = PreloadPageController(initialPage: index),
+        _currentIndex = index;
 
   @override
   void initState() {
@@ -71,6 +74,10 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
           },
           icon: Icon(Icons.arrow_back_ios),
         ),
+        actions: <Widget>[
+          IconButton(
+              icon: Icon(Icons.share), onPressed: () => _shareItem()),
+        ],
         backgroundColor: Colors.white70,
         elevation: 1.0,
       ),
@@ -95,6 +102,10 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     } else {
       SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     }
+  }
+
+  void _shareItem() async {
+    await Share.shareFiles(['${(await _mediaPathList[_currentIndex].originFile)!.path}']);
   }
 
   ScrollPhysics _getDefaultScrollPhysics() {
@@ -132,6 +143,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
       controller: _pageController,
       onPageChanged: (int position) {
         print('page changed. current: $position');
+        _currentIndex = position;
       },
     );
   }
