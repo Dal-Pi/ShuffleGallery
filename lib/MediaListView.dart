@@ -324,7 +324,7 @@ class _MediaListViewState extends State<MediaListView> {
         icon: Icon(Icons.arrow_back_ios),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      title: Text(_albumPath.name),
+      title: _getAlbumTitle(),
       floating: true,
       actions: <Widget>[
         IconButton(
@@ -333,6 +333,16 @@ class _MediaListViewState extends State<MediaListView> {
             icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
       ],
     );
+  }
+
+  Text _getAlbumTitle() {
+    var sb = StringBuffer();
+    if (_shuffleMode == ShuffleMode.Random) {
+      sb.write('Shuffled ');
+    }
+    sb.write(_albumPath.name);
+    sb.write(' (' + _albumPath.assetCount.toString() + ')');
+    return Text(sb.toString());
   }
 
   _getAlbumModeIcon() {
