@@ -183,9 +183,22 @@ class _AlbumListViewState extends State<AlbumListView> {
       ),
       home: Scaffold(
         body: _loading
-            ? Center(
-                child: CircularProgressIndicator(),
-            )
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(flex: 1, child:Container(),),
+                  Expanded(flex: 1,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset('assets/icon_fit.png'),
+                        Text('Shuffling Albums...'),
+                      ],
+                    ),
+                  ),
+                  Expanded(flex: 1, child:Container(),),
+                ],
+              )
             : _getAlbumView(),
       ),
     );
