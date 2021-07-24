@@ -15,6 +15,10 @@ import 'package:shuffle_gallery/Util.dart';
 
 const String kNoThumbnailMediaId = '-100';
 
+enum AlbumViewState {
+  Loading, NotGranted, Granted,
+}
+
 class AlbumListView extends StatefulWidget {
   @override
   _AlbumListViewState createState() => _AlbumListViewState();
@@ -26,7 +30,7 @@ class _AlbumListViewState extends State<AlbumListView> {
   int _currentPage = 0;
   int _lastPage = 0;
   List<Widget> _albumThumbnailList = [];
-  bool _loading = false;
+  AlbumViewState _albumViewState = AlbumViewState.Loading;
   int _thumbnailWidth = 1000;
 
   //TODO remove
@@ -45,12 +49,14 @@ class _AlbumListViewState extends State<AlbumListView> {
     developer.log('initState(), window.physicalSize: ${window.physicalSize}', name: 'SG');
     _thumbnailWidth = window.physicalSize.width ~/ _rowCount.toDouble();
     developer.log('initState(), _thumbnailWidth: $_thumbnailWidth', name: 'SG');
-    _loading = true;
+    _albumViewState = AlbumViewState.Loading;
     initAsync();
   }
 
   Future<void> initAsync() async {
-    if (await promptPermissionSetting()) {
+    bool allowedPermission = await promptPermissionSetting();
+    developer.log('_allowedPermission: $allowedPermission', name:'SG_Log');
+    if (allowedPermission) {
       List<AssetPathEntity> albumPaths = await PhotoManager.getAssetPathList(type: RequestType.image);
       print(albumPaths);
 
@@ -89,13 +95,11 @@ class _AlbumListViewState extends State<AlbumListView> {
       //         .getAssetListRange(start: 0, end: _albumPath.assetCount)
       // );
       _fetchMoreAlbumThumbnail();
-      setState(() {
-        //TODO index check
-        _loading = false;
-      });
     }
     setState(() {
-      _loading = false;
+      _albumViewState = allowedPermission
+          ? AlbumViewState.Granted
+          : AlbumViewState.NotGranted;
     });
   }
 
@@ -182,28 +186,56 @@ class _AlbumListViewState extends State<AlbumListView> {
         primaryColor: Colors.white,
       ),
       home: Scaffold(
-        body: _loading
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(flex: 1, child:Container(),),
-                  Expanded(flex: 1,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(100.0),
-                          child: Image.asset('assets/icon_full.png'),
-                        ),
-                        Text('Shuffling Albums...'),
-                      ],
-                    ),
-                  ),
-                  Expanded(flex: 1, child:Container(),),
-                ],
-              )
-            : _getAlbumView(),
+        body: _getBody(),
       ),
+    );
+  }
+
+  Widget _getBody() {
+    if (_albumViewState == AlbumViewState.Loading) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(flex: 1, child:Container(),),
+          Expanded(flex: 1,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(30.0),
+                  child: Image.asset('assets/icon_full.png'),
+                ),
+                //Text('Shuffling Albums...'),
+              ],
+            ),
+          ),
+          Expanded(flex: 1, child:Container(),),
+        ],
+      );
+    } else if (_albumViewState == AlbumViewState.Granted) {
+      return _getAlbumView();
+    } else { // _albumViewState == AlbumViewState.NotGranted
+      return _getPermissionRequestView();
+    }
+  }
+
+  _getPermissionRequestView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_open, size: 50.0),
+          Text('Shuffle Gallery requires storage permissions.'),
+          TextButton(
+              onPressed: () {
+                initAsync();
+                setState(() {
+                  _albumViewState = AlbumViewState.Loading;
+                });
+              },
+              child: Text('Check Permission Again'))
+        ],
+      )
     );
   }
 
