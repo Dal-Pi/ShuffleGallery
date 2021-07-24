@@ -23,14 +23,18 @@ enum ShuffleMode {
 
 class MediaListView extends StatefulWidget {
   final AssetPathEntity _assetPathEntity;
-  MediaListView(AssetPathEntity assetPathEntity)
-      : _assetPathEntity = assetPathEntity;
+  final Widget _thumbnail;
+  MediaListView(AssetPathEntity assetPathEntity, Widget thumbnail)
+      : _assetPathEntity = assetPathEntity,
+        _thumbnail = thumbnail;
 
   @override
-  _MediaListViewState createState() => _MediaListViewState(_assetPathEntity);
+  _MediaListViewState createState() =>
+      _MediaListViewState(_assetPathEntity, _thumbnail);
 }
 
 class _MediaListViewState extends State<MediaListView> {
+  final Widget _thumbnail;
   bool _loading = false;
   final AssetPathEntity _albumPath;
   List<AssetEntity> _sequentialMediaPathList = [];
@@ -51,7 +55,9 @@ class _MediaListViewState extends State<MediaListView> {
   double _baseViewScale = 1.0;
   double _updatedViewScale = 1.0;
 
-  _MediaListViewState(AssetPathEntity albumPath) : _albumPath = albumPath;
+  _MediaListViewState(AssetPathEntity albumPath, Widget thumbnail)
+      : _albumPath = albumPath,
+        _thumbnail = thumbnail;
 
   @override
   void initState() {
@@ -93,12 +99,34 @@ class _MediaListViewState extends State<MediaListView> {
     _renewalThumbWidth();
 
     return Scaffold(
-      body: _loading
-          ? Center(
-        child: CircularProgressIndicator(),
-      )
-          : _getAlbumView(),
+      body: _getBody(),
     );
+  }
+
+  Widget _getBody() {
+    if (_loading) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(flex: 1, child: Container(),),
+          Expanded(flex: 1,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(30.0),
+                  child: _thumbnail,
+                ),
+                //Text('Shuffling Images...'),
+              ],
+            ),
+          ),
+          Expanded(flex: 1, child: Container(),),
+        ],
+      );
+    } else {
+      return _getAlbumView();
+    }
   }
 
   void _renewalThumbWidth() {

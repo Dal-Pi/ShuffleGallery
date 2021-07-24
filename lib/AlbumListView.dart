@@ -285,7 +285,11 @@ class _AlbumListViewState extends State<AlbumListView> {
                 onTap: () =>
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) =>
-                            MediaListView(_albumPathList[index]))),
+                            MediaListView(
+                                _albumPathList[index],
+                                _albumThumbnailList[index]
+                            )
+                    )),
                 child: Column(
                   children: <Widget>[
                     ClipRRect(
