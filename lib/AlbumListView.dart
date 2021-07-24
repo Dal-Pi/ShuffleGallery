@@ -191,7 +191,10 @@ class _AlbumListViewState extends State<AlbumListView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset('assets/icon_fit.png'),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(100.0),
+                          child: Image.asset('assets/icon_full.png'),
+                        ),
                         Text('Shuffling Albums...'),
                       ],
                     ),
