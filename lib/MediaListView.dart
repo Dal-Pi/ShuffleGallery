@@ -351,14 +351,19 @@ class _MediaListViewState extends State<MediaListView> {
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios),
         onPressed: () => Navigator.of(context).pop(),
+        tooltip: 'Back',
       ),
       title: _getAlbumTitle(),
       floating: true,
       actions: <Widget>[
         IconButton(
-            icon: _getShuffleIcon(), onPressed: () => _onShuffleModeChanged()),
+          icon: _getShuffleIcon(), onPressed: () => _onShuffleModeChanged(),
+          tooltip: _getShuffleToolTip(),
+        ),
         IconButton(
-            icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange()),
+          icon: _getAlbumModeIcon(), onPressed: () => _onAlbumModeChange(),
+          tooltip: _getAlbumModeToolTip(),
+        ),
       ],
     );
   }
@@ -381,6 +386,14 @@ class _MediaListViewState extends State<MediaListView> {
     }
   }
 
+  String _getAlbumModeToolTip() {
+    if (_rowCount == kListRowCount) {
+      return 'Grid View';
+    } else {
+      return 'List View';
+    }
+  }
+
   _onAlbumModeChange() {
     setState(() {
       if (_rowCount == kListRowCount) {
@@ -396,6 +409,14 @@ class _MediaListViewState extends State<MediaListView> {
       return Icon(Icons.sort);
     } else {
       return Icon(Icons.shuffle);
+    }
+  }
+
+  String _getShuffleToolTip() {
+    if (_shuffleMode == ShuffleMode.Random) {
+      return 'Sort by Recent';
+    } else {
+      return 'Shuffle';
     }
   }
 
@@ -458,7 +479,13 @@ class _MediaListViewState extends State<MediaListView> {
                 //     PreloadViewPager(_targetMediaPathList, index,
                 //     _getThumbnailViewByCache(_targetMediaPathList[index])),
                 PageRouteBuilder(
-                  pageBuilder: (c, a1, a2) => PreloadViewPager(_targetMediaPathList, index,_getThumbnailViewByCache(_targetMediaPathList[index])),
+                  pageBuilder: (c, a1, a2) =>
+                      PreloadViewPager(
+                        _targetMediaPathList,
+                        index,
+                        _getThumbnailViewByCache(_targetMediaPathList[index]),
+                        true
+                      ),
                   //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
                   transitionDuration: Duration(milliseconds: 0),
                 ),
@@ -504,7 +531,13 @@ class _MediaListViewState extends State<MediaListView> {
                   //     PreloadViewPager(_targetMediaPathList, index,
                   //       _getThumbnailViewByCache(_targetMediaPathList[index])),
                   PageRouteBuilder(
-                    pageBuilder: (c, a1, a2) => PreloadViewPager(_targetMediaPathList, index,_getThumbnailViewByCache(_targetMediaPathList[index])),
+                    pageBuilder: (c, a1, a2) =>
+                        PreloadViewPager(
+                          _targetMediaPathList,
+                          index,
+                          _getThumbnailViewByCache(_targetMediaPathList[index]),
+                          false
+                        ),
                     //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
                     transitionDuration: Duration(milliseconds: 0),
                   ),

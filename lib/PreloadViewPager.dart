@@ -15,18 +15,25 @@ class PreloadViewPager extends StatefulWidget {
   final int _initialIndex;
 
   final Widget _thumbnail;
+  final bool _isFullscreenStart;
 
   PreloadViewPager(List<AssetEntity> mediaPathEntityList, int index
-      , Widget thumbnail)
+      , Widget thumbnail, bool fullscreen)
       : _mediaPathEntityList = mediaPathEntityList,
         _initialIndex = index,
-        _thumbnail = thumbnail {
+        _thumbnail = thumbnail,
+        _isFullscreenStart = fullscreen {
     developer.log('index: $index', name: 'SG');
   }
 
   @override
   _PreloadViewPagerState createState() =>
-      _PreloadViewPagerState(_mediaPathEntityList, _initialIndex, _thumbnail);
+      _PreloadViewPagerState(
+          _mediaPathEntityList,
+          _initialIndex,
+          _thumbnail,
+          _isFullscreenStart
+      );
 }
 
 class _PreloadViewPagerState extends State<PreloadViewPager> {
@@ -34,7 +41,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
   //int _index;
   bool isInitialSize = true;
   PreloadPageController _pageController;
-  bool _isFullViewMode = true;
+  bool _isFullViewMode = false;
   //PhotoViewController _viewController = PhotoViewController();
   //PhotoViewScaleStateController _viewScaleStateController =
   //  PhotoViewScaleStateController();
@@ -43,12 +50,13 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
 
   final Widget _thumbnail;
 
-  _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index, Widget thumbnail)
+  _PreloadViewPagerState(List<AssetEntity> mediaPathList, int index, Widget thumbnail, bool fullscreen)
       : _mediaPathList = mediaPathList,
         //_index = index,
         _thumbnail = thumbnail,
         _pageController = PreloadPageController(initialPage: index),
-        _currentIndex = index;
+        _currentIndex = index,
+        _isFullViewMode = fullscreen;
 
   @override
   void initState() {
@@ -73,10 +81,19 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
             Navigator.of(context).pop();
           },
           icon: Icon(Icons.arrow_back_ios),
+          tooltip: 'Back',
         ),
         actions: <Widget>[
           IconButton(
-              icon: Icon(Icons.share), onPressed: () => _shareItem()),
+            icon: Icon(Icons.fullscreen_rounded),
+            onPressed: () => _changeFullScreenMode(true),
+            tooltip: 'Fullscreen',
+          ),
+          IconButton(
+            icon: Icon(Icons.share),
+            tooltip: 'Share',
+            onPressed: () => _shareItem(),
+          ),
         ],
         backgroundColor: Colors.white70,
         elevation: 1.0,
@@ -93,6 +110,15 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     super.dispose();
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     //_viewController.dispose();
+  }
+
+  void _changeFullScreenMode(bool enabled) {
+    if (_isFullViewMode != enabled) {
+      setState(() {
+        _isFullViewMode = !_isFullViewMode;
+      });
+      _setSystemOverlay();
+    }
   }
 
   void _setSystemOverlay() {
@@ -162,28 +188,22 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
         } else {
           return GestureDetector(
             //TODO change action
-            onTap: (){
-              setState(() {
-                _isFullViewMode = !_isFullViewMode;
-              });
-              _setSystemOverlay();
-              //_pageController.jumpToPage(index + 1);
-              },
-
-              child: ClipRect(
-                child: PhotoView(
-                  imageProvider: FileImage(
-                    snapshot.data as File,
-                  ),
-                  loadingBuilder: (context, event) => FittedBox(
-                    child: _thumbnail,
-                    fit: BoxFit.contain,
-                  ),
-                  backgroundDecoration: BoxDecoration(color: Colors.white,),
-                //controller: _viewController,
-                scaleStateChangedCallback: _viewScaleListener,
-                //controller: ,
-                //controller: PhotoViewController(),
+            onTap: () =>
+              _changeFullScreenMode(!_isFullViewMode),
+            child: ClipRect(
+              child: PhotoView(
+                imageProvider: FileImage(
+                  snapshot.data as File,
+                ),
+                loadingBuilder: (context, event) => FittedBox(
+                  child: _thumbnail,
+                  fit: BoxFit.contain,
+                ),
+                backgroundDecoration: BoxDecoration(color: Colors.white,),
+              //controller: _viewController,
+              scaleStateChangedCallback: _viewScaleListener,
+              //controller: ,
+              //controller: PhotoViewController(),
             ),
             // heroAttributes: PhotoViewHeroAttributes(
             //   tag: _mediaPathList[index].id.toString(),
