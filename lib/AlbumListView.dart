@@ -9,6 +9,9 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:shuffle_gallery/MediaListView.dart';
 import 'package:shuffle_gallery/Util.dart';
 
+//test
+import 'package:permission_handler/permission_handler.dart';
+
 // void main() {
 //   runApp(AlbumListView());
 // }
@@ -32,6 +35,7 @@ class _AlbumListViewState extends State<AlbumListView> {
   List<Widget> _albumThumbnailList = [];
   AlbumViewState _albumViewState = AlbumViewState.Loading;
   int _thumbnailWidth = 1000;
+
 
   //TODO remove
   //test
@@ -233,7 +237,16 @@ class _AlbumListViewState extends State<AlbumListView> {
                   _albumViewState = AlbumViewState.Loading;
                 });
               },
-              child: Text('Check Permission Again'))
+              child: Text('Check Permission Again'),
+          ),
+          Text('Or, edit the permissions in the app settings'),
+          Text('and select \'Check Permission Again\''),
+          TextButton(
+            onPressed: () {
+              openAppSettings();
+            },
+            child: Text('Open App Settings'),
+          ),
         ],
       )
     );
