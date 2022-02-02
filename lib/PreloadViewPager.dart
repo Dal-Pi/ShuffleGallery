@@ -95,7 +95,6 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
             onPressed: () => _shareItem(),
           ),
         ],
-        backgroundColor: Colors.white70,
         elevation: 1.0,
       ),
       body: Center(
@@ -174,6 +173,15 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
     );
   }
 
+  _getBgColorByTheme() {
+    final ThemeData theme = Theme.of(context);
+    if (theme.brightness == Brightness.light) {
+      return Colors.white;
+    } else {
+      return Colors.black;
+    }
+  }
+
   Widget _getImageView(int position) {
     final int index = position;
     //developer.log('position: $position', name: 'SG');
@@ -199,7 +207,7 @@ class _PreloadViewPagerState extends State<PreloadViewPager> {
                   child: _thumbnail,
                   fit: BoxFit.contain,
                 ),
-                backgroundDecoration: BoxDecoration(color: Colors.white,),
+                backgroundDecoration: BoxDecoration(color: _getBgColorByTheme(),),
               //controller: _viewController,
               scaleStateChangedCallback: _viewScaleListener,
               //controller: ,

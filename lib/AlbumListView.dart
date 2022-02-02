@@ -189,6 +189,7 @@ class _AlbumListViewState extends State<AlbumListView> {
       theme: ThemeData(
         primaryColor: Colors.white,
       ),
+      darkTheme: ThemeData.dark(),
       home: Scaffold(
         body: _getBody(),
       ),
